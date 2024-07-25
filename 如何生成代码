@@ -1,0 +1,4 @@
+mvn clean package -Ddeps.dir=D:/study/Desktop/Desktop/study/rabbitmq-java-client/codegen/rabbitmq-codegen -Dcodegen.dir=D:/study/Desktop/Desktop/study/rabbitmq-java-client/codegen/rabbitmq-codegen -Dmaven.test.skip
+
+
+参考：https://blog.csdn.net/java___007/article/details/126381972?spm=1001.2101.3001.6650.2&utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7ERate-2-126381972-blog-102816051.235%5Ev43%5Epc_blog_bottom_relevance_base3&depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7ERate-2-126381972-blog-102816051.235%5Ev43%5Epc_blog_bottom_relevance_base3&utm_relevant_index=5
