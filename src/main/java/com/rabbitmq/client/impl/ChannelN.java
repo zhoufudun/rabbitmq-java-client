@@ -49,7 +49,8 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
     private static final String UNSPECIFIED_OUT_OF_BAND = "";
     private static final Logger LOGGER = LoggerFactory.getLogger(ChannelN.class);
 
-    /** Map from consumer tag to {@link Consumer} instance.
+    /**
+     * Map from consumer tag to {@link Consumer} instance.
      * <p/>
      * Note that, in general, this map should ONLY ever be accessed
      * from the connection's reader thread. We go to some pains to
@@ -58,35 +59,53 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
      * in basicConsume and basicCancel.
      */
     private final Map<String, Consumer> _consumers =
-        Collections.synchronizedMap(new HashMap<String, Consumer>());
+            Collections.synchronizedMap(new HashMap<String, Consumer>());
 
     /* All listeners collections are in CopyOnWriteArrayList objects */
-    /** The ReturnListener collection. */
+    /**
+     * The ReturnListener collection.
+     */
     private final Collection<ReturnListener> returnListeners = new CopyOnWriteArrayList<ReturnListener>();
-    /** The ConfirmListener collection. */
+    /**
+     * The ConfirmListener collection.
+     */
     private final Collection<ConfirmListener> confirmListeners = new CopyOnWriteArrayList<ConfirmListener>();
 
-    /** Sequence number of next published message requiring confirmation.*/
+    /**
+     * Sequence number of next published message requiring confirmation.
+     */
     private long nextPublishSeqNo = 0L;
 
-    /** The current default consumer, or null if there is none. */
+    /**
+     * The current default consumer, or null if there is none.
+     */
     private volatile Consumer defaultConsumer = null;
 
-    /** Dispatcher of consumer work for this channel */
+    /**
+     * Dispatcher of consumer work for this channel
+     */
     private final ConsumerDispatcher dispatcher;
 
-    /** Future boolean for shutting down */
+    /**
+     * Future boolean for shutting down
+     */
     private volatile CountDownLatch finishedShutdownFlag = null;
 
-    /** Set of currently unconfirmed messages (i.e. messages that have
-     *  not been ack'd or nack'd by the server yet. */
+    /**
+     * Set of currently unconfirmed messages (i.e. messages that have
+     * not been ack'd or nack'd by the server yet.
+     */
     private final SortedSet<Long> unconfirmedSet =
             Collections.synchronizedSortedSet(new TreeSet<Long>());
 
-    /** Whether the confirm select method has been successfully activated */
+    /**
+     * Whether the confirm select method has been successfully activated
+     */
     private boolean confirmSelectActivated = false;
 
-    /** Whether any nacks have been received since the last waitForConfirms(). */
+    /**
+     * Whether any nacks have been received since the last waitForConfirms().
+     */
     private volatile boolean onlyAcksReceived = true;
 
     protected final MetricsCollector metricsCollector;
@@ -96,26 +115,28 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
      * Construct a new channel on the given connection with the given
      * channel number. Usually not called directly - call
      * Connection.createChannel instead.
-     * @see Connection#createChannel
-     * @param connection The connection associated with this channel
+     *
+     * @param connection    The connection associated with this channel
      * @param channelNumber The channel number to be associated with this channel
-     * @param workService service for managing this channel's consumer callbacks
+     * @param workService   service for managing this channel's consumer callbacks
+     * @see Connection#createChannel
      */
     public ChannelN(AMQConnection connection, int channelNumber,
                     ConsumerWorkService workService) {
         this(connection, channelNumber, workService,
-             new NoOpMetricsCollector(), ObservationCollector.NO_OP);
+                new NoOpMetricsCollector(), ObservationCollector.NO_OP);
     }
 
     /**
      * Construct a new channel on the given connection with the given
      * channel number. Usually not called directly - call
      * Connection.createChannel instead.
-     * @see Connection#createChannel
-     * @param connection The connection associated with this channel
-     * @param channelNumber The channel number to be associated with this channel
-     * @param workService service for managing this channel's consumer callbacks
+     *
+     * @param connection       The connection associated with this channel
+     * @param channelNumber    The channel number to be associated with this channel
+     * @param workService      service for managing this channel's consumer callbacks
      * @param metricsCollector service for managing metrics
+     * @see Connection#createChannel
      */
     public ChannelN(AMQConnection connection, int channelNumber,
                     ConsumerWorkService workService,
@@ -129,6 +150,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
     /**
      * Package method: open the channel.
      * This is only called from {@link ChannelManager}.
+     *
      * @throws IOException if any problem is encountered
      */
     public void open() throws IOException {
@@ -144,7 +166,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
     @Override
     public ReturnListener addReturnListener(ReturnCallback returnCallback) {
         ReturnListener returnListener = (replyCode, replyText, exchange, routingKey, properties, body) -> returnCallback.handle(new Return(
-            replyCode, replyText, exchange, routingKey, properties, body
+                replyCode, replyText, exchange, routingKey, properties, body
         ));
         this.addReturnListener(returnListener);
         return returnListener;
@@ -193,19 +215,23 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
         confirmListeners.clear();
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean waitForConfirms()
-        throws InterruptedException
-    {
+            throws InterruptedException {
         boolean confirms = false;
         try {
             confirms = waitForConfirms(0L);
-        } catch (TimeoutException e) { }
+        } catch (TimeoutException e) {
+        }
         return confirms;
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean waitForConfirms(long timeout)
             throws InterruptedException, TimeoutException {
@@ -236,21 +262,24 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
         }
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void waitForConfirmsOrDie()
-        throws IOException, InterruptedException
-    {
+            throws IOException, InterruptedException {
         try {
             waitForConfirmsOrDie(0L);
-        } catch (TimeoutException e) { }
+        } catch (TimeoutException e) {
+        }
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void waitForConfirmsOrDie(long timeout)
-        throws IOException, InterruptedException, TimeoutException
-    {
+            throws IOException, InterruptedException, TimeoutException {
         try {
             if (!waitForConfirms(timeout)) {
                 close(AMQP.REPLY_SUCCESS, "NACKS RECEIVED", true, null, false);
@@ -258,11 +287,13 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
             }
         } catch (TimeoutException e) {
             close(AMQP.PRECONDITION_FAILED, "TIMEOUT WAITING FOR ACK");
-            throw(e);
+            throw (e);
         }
     }
 
-    /** Returns the current default consumer. */
+    /**
+     * Returns the current default consumer.
+     */
     @Override
     public Consumer getDefaultConsumer() {
         return defaultConsumer;
@@ -280,6 +311,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
     /**
      * Sends a ShutdownSignal to all active consumers.
      * Idempotent.
+     *
      * @param signal an exception signalling channel shutdown
      */
     private void broadcastShutdownSignal(ShutdownSignalException signal) {
@@ -290,16 +322,15 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
      * Start to shutdown -- defer rest of processing until ready
      */
     private void startProcessShutdownSignal(ShutdownSignalException signal,
-                                                boolean ignoreClosed,
-                                                boolean notifyRpc)
-    {   super.processShutdownSignal(signal, ignoreClosed, notifyRpc);
+                                            boolean ignoreClosed,
+                                            boolean notifyRpc) {
+        super.processShutdownSignal(signal, ignoreClosed, notifyRpc);
     }
 
     /**
      * Finish shutdown processing -- idempotent
      */
-    private void finishProcessShutdownSignal()
-    {
+    private void finishProcessShutdownSignal() {
         this.dispatcher.quiesce();
         broadcastShutdownSignal(getCloseReason());
 
@@ -312,10 +343,10 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
      * Protected API - overridden to quiesce consumer work and broadcast the signal
      * to all consumers after calling the superclass's method.
      */
-    @Override public void processShutdownSignal(ShutdownSignalException signal,
-                                                boolean ignoreClosed,
-                                                boolean notifyRpc)
-    {
+    @Override
+    public void processShutdownSignal(ShutdownSignalException signal,
+                                      boolean ignoreClosed,
+                                      boolean notifyRpc) {
         startProcessShutdownSignal(signal, ignoreClosed, notifyRpc);
         finishProcessShutdownSignal();
     }
@@ -334,8 +365,8 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
      * we're in quiescing mode, all inbound commands are ignored,
      * except for Channel.Close and Channel.CloseOk.
      */
-    @Override public boolean processAsync(Command command) throws IOException
-    {
+    @Override
+    public boolean processAsync(Command command) throws IOException {
         // If we are isOpen(), then we process commands normally.
         //
         // If we are not, however, then we are in a quiescing, or
@@ -389,7 +420,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
                 // so return false
                 return false;
             } else if (method instanceof Basic.Cancel) {
-                Basic.Cancel m = (Basic.Cancel)method;
+                Basic.Cancel m = (Basic.Cancel) method;
                 String consumerTag = m.getConsumerTag();
                 Consumer callback = _consumers.remove(consumerTag);
                 // Not finding any matching consumer isn't necessarily an indication of an issue anywhere.
@@ -407,10 +438,10 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
                         throw e;
                     } catch (Throwable ex) {
                         getConnection().getExceptionHandler().handleConsumerException(this,
-                                                                                      ex,
-                                                                                      callback,
-                                                                                      consumerTag,
-                                                                                      "handleCancel");
+                                ex,
+                                callback,
+                                consumerTag,
+                                "handleCancel");
                     }
                 } else {
                     LOGGER.warn("Could not cancel consumer with unknown tag {}", consumerTag);
@@ -449,35 +480,34 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
                 throw new IllegalStateException("Unsolicited delivery -" +
                         " see Channel.setDefaultConsumer to handle this" +
                         " case.");
-            }
-            else {
+            } else {
                 callback = defaultConsumer;
             }
         }
 
         Envelope envelope = new Envelope(m.getDeliveryTag(),
-                                         m.getRedelivered(),
-                                         m.getExchange(),
-                                         m.getRoutingKey());
+                m.getRedelivered(),
+                m.getExchange(),
+                m.getRoutingKey());
         try {
             // call metricsCollector before the dispatching (which is async anyway)
             // this way, the message is inside the stats before it is handled
             // in case a manual ack in the callback, the stats will be able to record the ack
             metricsCollector.consumedMessage(this, m.getDeliveryTag(), m.getConsumerTag());
             this.dispatcher.handleDelivery(callback,
-                                           m.getConsumerTag(),
-                                           envelope,
-                                           (BasicProperties) command.getContentHeader(),
-                                           command.getContentBody());
+                    m.getConsumerTag(),
+                    envelope,
+                    (BasicProperties) command.getContentHeader(),
+                    command.getContentBody());
         } catch (WorkPoolFullException e) {
             // couldn't enqueue in work pool, propagating
             throw e;
         } catch (Throwable ex) {
             getConnection().getExceptionHandler().handleConsumerException(this,
-                ex,
-                callback,
-                m.getConsumerTag(),
-                "handleDelivery");
+                    ex,
+                    callback,
+                    m.getConsumerTag(),
+                    "handleDelivery");
         }
     }
 
@@ -485,11 +515,11 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
         try {
             for (ReturnListener l : this.returnListeners) {
                 l.handleReturn(basicReturn.getReplyCode(),
-                    basicReturn.getReplyText(),
-                    basicReturn.getExchange(),
-                    basicReturn.getRoutingKey(),
-                    (BasicProperties) command.getContentHeader(),
-                    command.getContentBody());
+                        basicReturn.getReplyText(),
+                        basicReturn.getExchange(),
+                        basicReturn.getRoutingKey(),
+                        (BasicProperties) command.getContentHeader(),
+                        command.getContentBody());
             }
         } catch (Throwable ex) {
             getConnection().getExceptionHandler().handleReturnListenerException(this, ex);
@@ -524,9 +554,9 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
 
     private void asyncShutdown(Command command) throws IOException {
         ShutdownSignalException signal = new ShutdownSignalException(false,
-                                                                     false,
-                                                                     command.getMethod(),
-                                                                     this);
+                false,
+                command.getMethod(),
+                this);
         _channelLock.lock();
         try {
             try {
@@ -536,40 +566,45 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
                 releaseChannel();
                 notifyOutstandingRpc(signal);
             }
-        }
-        finally {
+        } finally {
             _channelLock.unlock();
         }
         notifyListeners();
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public void close()
-        throws IOException, TimeoutException {
+            throws IOException, TimeoutException {
         close(AMQP.REPLY_SUCCESS, "OK");
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public void close(int closeCode, String closeMessage)
-        throws IOException, TimeoutException {
+            throws IOException, TimeoutException {
         close(closeCode, closeMessage, true, null, false);
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
-    public void abort()
-    {
+    public void abort() {
         abort(AMQP.REPLY_SUCCESS, "OK");
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
-    public void abort(int closeCode, String closeMessage)
-    {
+    public void abort(int closeCode, String closeMessage) {
         try {
-          close(closeCode, closeMessage, true, null, true);
+            close(closeCode, closeMessage, true, null, true);
         } catch (IOException | TimeoutException _e) {
             // abort() shall silently discard any exceptions
         }
@@ -579,38 +614,40 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
      * Protected API - Close channel with code and message, indicating
      * the source of the closure and a causing exception (null if
      * none).
-     * @param closeCode the close code (See under "Reply Codes" in the AMQP specification)
-     * @param closeMessage a message indicating the reason for closing the connection
+     *
+     * @param closeCode              the close code (See under "Reply Codes" in the AMQP specification)
+     * @param closeMessage           a message indicating the reason for closing the connection
      * @param initiatedByApplication true if this comes from an API call, false otherwise
-     * @param cause exception triggering close
-     * @param abort true if we should close and ignore errors
+     * @param cause                  exception triggering close
+     * @param abort                  true if we should close and ignore errors
      * @throws IOException if an error is encountered
      */
     protected void close(int closeCode,
-                      String closeMessage,
-                      boolean initiatedByApplication,
-                      Throwable cause,
-                      boolean abort)
-        throws IOException, TimeoutException {
+                         String closeMessage,
+                         boolean initiatedByApplication,
+                         Throwable cause,
+                         boolean abort)
+            throws IOException, TimeoutException {
         // First, notify all our dependents that we are shutting down.
         // This clears isOpen(), so no further work from the
         // application side will be accepted, and any inbound commands
         // will be discarded (unless they're channel.close-oks).
         Channel.Close reason = new Channel.Close(closeCode, closeMessage, 0, 0);
         ShutdownSignalException signal = new ShutdownSignalException(false,
-                                                                     initiatedByApplication,
-                                                                     reason,
-                                                                     this);
+                initiatedByApplication,
+                reason,
+                this);
         if (cause != null) {
             signal.initCause(cause);
         }
 
-        BlockingRpcContinuation<AMQCommand> k = new BlockingRpcContinuation<AMQCommand>(){
+        BlockingRpcContinuation<AMQCommand> k = new BlockingRpcContinuation<AMQCommand>() {
             @Override
             public AMQCommand transformReply(AMQCommand command) {
                 ChannelN.this.finishProcessShutdownSignal();
                 return command;
-            }};
+            }
+        };
         boolean notify = false;
         try {
             // Synchronize the block below to avoid race conditions in case
@@ -627,7 +664,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
             // we wait for the reply. We ignore the result.
             // (It's NOT always close-ok.)
             notify = true;
-			      // do not wait indefinitely
+            // do not wait indefinitely
             k.getReply(10000);
         } catch (TimeoutException ise) {
             if (!abort)
@@ -651,59 +688,65 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
         }
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public void basicQos(int prefetchSize, int prefetchCount, boolean global)
-	throws IOException
-    {
+            throws IOException {
         if (prefetchCount < 0 || prefetchCount > MAX_UNSIGNED_SHORT) {
             throw new IllegalArgumentException("Prefetch count must be between 0 and " + MAX_UNSIGNED_SHORT);
         }
-	    exnWrappingRpc(new Basic.Qos(prefetchSize, prefetchCount, global));
+        exnWrappingRpc(new Basic.Qos(prefetchSize, prefetchCount, global));
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public void basicQos(int prefetchCount, boolean global)
-            throws IOException
-    {
+            throws IOException {
         basicQos(0, prefetchCount, global);
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public void basicQos(int prefetchCount)
-	throws IOException
-    {
-	basicQos(0, prefetchCount, false);
+            throws IOException {
+        basicQos(0, prefetchCount, false);
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public void basicPublish(String exchange, String routingKey,
                              BasicProperties props, byte[] body)
-        throws IOException
-    {
+            throws IOException {
         basicPublish(exchange, routingKey, false, props, body);
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public void basicPublish(String exchange, String routingKey,
                              boolean mandatory,
                              BasicProperties props, byte[] body)
-        throws IOException
-    {
+            throws IOException {
         basicPublish(exchange, routingKey, mandatory, false, props, body);
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public void basicPublish(String exchange, String routingKey,
                              boolean mandatory, boolean immediate,
                              BasicProperties props, byte[] body)
-        throws IOException
-    {
+            throws IOException {
         final long deliveryTag;
         if (nextPublishSeqNo > 0) {
             deliveryTag = getNextPublishSeqNo();
@@ -734,28 +777,30 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
         metricsCollector.basicPublish(this, deliveryTag);
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public Exchange.DeclareOk exchangeDeclare(String exchange, String type,
                                               boolean durable, boolean autoDelete,
                                               Map<String, Object> arguments)
-        throws IOException
-    {
+            throws IOException {
         return exchangeDeclare(exchange, type,
-                               durable, autoDelete, false,
-                               arguments);
+                durable, autoDelete, false,
+                arguments);
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public Exchange.DeclareOk exchangeDeclare(String exchange, BuiltinExchangeType type,
-        boolean durable, boolean autoDelete,
-        Map<String, Object> arguments)
-        throws IOException
-    {
+                                              boolean durable, boolean autoDelete,
+                                              Map<String, Object> arguments)
+            throws IOException {
         return exchangeDeclare(exchange, type.getType(),
-            durable, autoDelete,
-            arguments);
+                durable, autoDelete,
+                arguments);
     }
 
     @Override
@@ -766,243 +811,270 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
                                       boolean internal,
                                       Map<String, Object> arguments) throws IOException {
         transmit(new AMQCommand(new Exchange.Declare.Builder()
-                                .exchange(exchange)
-                                .type(type)
-                                .durable(durable)
-                                .autoDelete(autoDelete)
-                                .internal(internal)
-                                .arguments(arguments)
-                                .passive(false)
-                                .nowait(true)
-                                .build()));
+                .exchange(exchange)
+                .type(type)
+                .durable(durable)
+                .autoDelete(autoDelete)
+                .internal(internal)
+                .arguments(arguments)
+                .passive(false)
+                .nowait(true)
+                .build()));
     }
 
     @Override
     public void exchangeDeclareNoWait(String exchange,
-        BuiltinExchangeType type,
-        boolean durable,
-        boolean autoDelete,
-        boolean internal,
-        Map<String, Object> arguments) throws IOException {
+                                      BuiltinExchangeType type,
+                                      boolean durable,
+                                      boolean autoDelete,
+                                      boolean internal,
+                                      Map<String, Object> arguments) throws IOException {
         exchangeDeclareNoWait(exchange, type.getType(),
-            durable, autoDelete, internal,
-            arguments);
+                durable, autoDelete, internal,
+                arguments);
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public Exchange.DeclareOk exchangeDeclare(String exchange, String type,
                                               boolean durable,
                                               boolean autoDelete,
                                               boolean internal,
                                               Map<String, Object> arguments)
-            throws IOException
-    {
+            throws IOException {
         return (Exchange.DeclareOk)
                 exnWrappingRpc(new Exchange.Declare.Builder()
-                                .exchange(exchange)
-                                .type(type)
-                                .durable(durable)
-                                .autoDelete(autoDelete)
-                                .internal(internal)
-                                .arguments(arguments)
-                               .build())
-                .getMethod();
+                        .exchange(exchange)
+                        .type(type)
+                        .durable(durable)
+                        .autoDelete(autoDelete)
+                        .internal(internal)
+                        .arguments(arguments)
+                        .build())
+                        .getMethod();
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public Exchange.DeclareOk exchangeDeclare(String exchange, BuiltinExchangeType type,
-        boolean durable,
-        boolean autoDelete,
-        boolean internal,
-        Map<String, Object> arguments)
-        throws IOException
-    {
+                                              boolean durable,
+                                              boolean autoDelete,
+                                              boolean internal,
+                                              Map<String, Object> arguments)
+            throws IOException {
         return exchangeDeclare(exchange, type.getType(),
-            durable, autoDelete, internal,
-            arguments);
+                durable, autoDelete, internal,
+                arguments);
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public Exchange.DeclareOk exchangeDeclare(String exchange, String type,
                                               boolean durable)
-        throws IOException
-    {
+            throws IOException {
         return exchangeDeclare(exchange, type, durable, false, null);
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public Exchange.DeclareOk exchangeDeclare(String exchange, BuiltinExchangeType type,
-        boolean durable)
-        throws IOException
-    {
+                                              boolean durable)
+            throws IOException {
         return exchangeDeclare(exchange, type.getType(), durable);
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public Exchange.DeclareOk exchangeDeclare(String exchange, String type)
-        throws IOException
-    {
+            throws IOException {
         return exchangeDeclare(exchange, type, false, false, null);
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public Exchange.DeclareOk exchangeDeclare(String exchange, BuiltinExchangeType type)
-        throws IOException
-    {
+            throws IOException {
         return exchangeDeclare(exchange, type.getType());
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public Exchange.DeclareOk exchangeDeclarePassive(String exchange)
-        throws IOException
-    {
+            throws IOException {
         return (Exchange.DeclareOk)
-            exnWrappingRpc(new Exchange.Declare.Builder()
-                            .exchange(exchange)
-                            .type("")
-                            .passive()
-                           .build())
-            .getMethod();
+                exnWrappingRpc(new Exchange.Declare.Builder()
+                        .exchange(exchange)
+                        .type("")
+                        .passive()
+                        .build())
+                        .getMethod();
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public Exchange.DeleteOk exchangeDelete(String exchange, boolean ifUnused)
-        throws IOException
-    {
+            throws IOException {
         return (Exchange.DeleteOk)
-            exnWrappingRpc(new Exchange.Delete.Builder()
-                            .exchange(exchange)
-                            .ifUnused(ifUnused)
-                           .build())
-            .getMethod();
+                exnWrappingRpc(new Exchange.Delete.Builder()
+                        .exchange(exchange)
+                        .ifUnused(ifUnused)
+                        .build())
+                        .getMethod();
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public void exchangeDeleteNoWait(String exchange, boolean ifUnused) throws IOException {
         transmit(new AMQCommand(new Exchange.Delete.Builder()
-                                        .exchange(exchange)
-                                        .ifUnused(ifUnused)
-                                        .nowait(true)
-                                        .build()));
+                .exchange(exchange)
+                .ifUnused(ifUnused)
+                .nowait(true)
+                .build()));
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public Exchange.DeleteOk exchangeDelete(String exchange)
-        throws IOException
-    {
+            throws IOException {
         return exchangeDelete(exchange, false);
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public Exchange.BindOk exchangeBind(String destination, String source,
-            String routingKey, Map<String, Object> arguments)
+                                        String routingKey, Map<String, Object> arguments)
             throws IOException {
         return (Exchange.BindOk)
-               exnWrappingRpc(new Exchange.Bind.Builder()
-                               .destination(destination)
-                               .source(source)
-                               .routingKey(routingKey)
-                               .arguments(arguments)
-                              .build())
-               .getMethod();
+                exnWrappingRpc(new Exchange.Bind.Builder()
+                        .destination(destination)
+                        .source(source)
+                        .routingKey(routingKey)
+                        .arguments(arguments)
+                        .build())
+                        .getMethod();
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public void exchangeBindNoWait(String destination,
                                    String source,
                                    String routingKey,
                                    Map<String, Object> arguments) throws IOException {
         transmit(new AMQCommand(new Exchange.Bind.Builder()
-                                .destination(destination)
-                                .source(source)
-                                .routingKey(routingKey)
-                                .arguments(arguments)
-                                .nowait(true)
-                                .build()));
+                .destination(destination)
+                .source(source)
+                .routingKey(routingKey)
+                .arguments(arguments)
+                .nowait(true)
+                .build()));
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public Exchange.BindOk exchangeBind(String destination, String source,
-            String routingKey) throws IOException {
+                                        String routingKey) throws IOException {
         return exchangeBind(destination, source, routingKey, null);
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public Exchange.UnbindOk exchangeUnbind(String destination, String source,
-            String routingKey, Map<String, Object> arguments)
+                                            String routingKey, Map<String, Object> arguments)
             throws IOException {
         return (Exchange.UnbindOk)
-               exnWrappingRpc(new Exchange.Unbind.Builder()
-                               .destination(destination)
-                               .source(source)
-                               .routingKey(routingKey)
-                               .arguments(arguments)
-                              .build())
-               .getMethod();
+                exnWrappingRpc(new Exchange.Unbind.Builder()
+                        .destination(destination)
+                        .source(source)
+                        .routingKey(routingKey)
+                        .arguments(arguments)
+                        .build())
+                        .getMethod();
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public Exchange.UnbindOk exchangeUnbind(String destination, String source,
-            String routingKey) throws IOException {
+                                            String routingKey) throws IOException {
         return exchangeUnbind(destination, source, routingKey, null);
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public void exchangeUnbindNoWait(String destination, String source,
                                      String routingKey, Map<String, Object> arguments)
             throws IOException {
         transmit(new AMQCommand(new Exchange.Unbind.Builder()
-                                 .destination(destination)
-                                 .source(source)
-                                 .routingKey(routingKey)
-                                 .arguments(arguments)
-                                 .nowait(true)
-                                 .build()));
+                .destination(destination)
+                .source(source)
+                .routingKey(routingKey)
+                .arguments(arguments)
+                .nowait(true)
+                .build()));
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public Queue.DeclareOk queueDeclare(String queue, boolean durable, boolean exclusive,
                                         boolean autoDelete, Map<String, Object> arguments)
-        throws IOException
-    {
+            throws IOException {
         validateQueueNameLength(queue);
         return (Queue.DeclareOk)
-               exnWrappingRpc(new Queue.Declare.Builder()
-                               .queue(queue)
-                               .durable(durable)
-                               .exclusive(exclusive)
-                               .autoDelete(autoDelete)
-                               .arguments(arguments)
-                              .build())
-               .getMethod();
+                exnWrappingRpc(new Queue.Declare.Builder()
+                        .queue(queue)
+                        .durable(durable)
+                        .exclusive(exclusive)
+                        .autoDelete(autoDelete)
+                        .arguments(arguments)
+                        .build())
+                        .getMethod();
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public com.rabbitmq.client.AMQP.Queue.DeclareOk queueDeclare()
-        throws IOException
-    {
+            throws IOException {
         return queueDeclare("", false, true, true, null);
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public void queueDeclareNoWait(String queue,
                                    boolean durable,
@@ -1011,106 +1083,117 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
                                    Map<String, Object> arguments) throws IOException {
         validateQueueNameLength(queue);
         transmit(new AMQCommand(new Queue.Declare.Builder()
-                                .queue(queue)
-                                .durable(durable)
-                                .exclusive(exclusive)
-                                .autoDelete(autoDelete)
-                                .arguments(arguments)
-                                .passive(false)
-                                .nowait(true)
-                                .build()));
+                .queue(queue)
+                .durable(durable)
+                .exclusive(exclusive)
+                .autoDelete(autoDelete)
+                .arguments(arguments)
+                .passive(false)
+                .nowait(true)
+                .build()));
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public Queue.DeclareOk queueDeclarePassive(String queue)
-        throws IOException
-    {
+            throws IOException {
         validateQueueNameLength(queue);
         return (Queue.DeclareOk)
-               exnWrappingRpc(new Queue.Declare.Builder()
-                               .queue(queue)
-                               .passive()
-                               .exclusive()
-                               .autoDelete()
-                              .build())
-               .getMethod();
+                exnWrappingRpc(new Queue.Declare.Builder()
+                        .queue(queue)
+                        .passive()
+                        .exclusive()
+                        .autoDelete()
+                        .build())
+                        .getMethod();
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public long messageCount(String queue) throws IOException {
         Queue.DeclareOk ok = queueDeclarePassive(queue);
         return ok.getMessageCount();
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public long consumerCount(String queue) throws IOException {
         Queue.DeclareOk ok = queueDeclarePassive(queue);
         return ok.getConsumerCount();
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public Queue.DeleteOk queueDelete(String queue, boolean ifUnused, boolean ifEmpty)
-        throws IOException
-    {
+            throws IOException {
         validateQueueNameLength(queue);
         return (Queue.DeleteOk)
-               exnWrappingRpc(new Queue.Delete.Builder()
-                               .queue(queue)
-                               .ifUnused(ifUnused)
-                               .ifEmpty(ifEmpty)
-                              .build())
-               .getMethod();
+                exnWrappingRpc(new Queue.Delete.Builder()
+                        .queue(queue)
+                        .ifUnused(ifUnused)
+                        .ifEmpty(ifEmpty)
+                        .build())
+                        .getMethod();
     }
 
     @Override
     public void queueDeleteNoWait(String queue, boolean ifUnused, boolean ifEmpty) throws IOException {
         validateQueueNameLength(queue);
         transmit(new AMQCommand(new Queue.Delete.Builder()
-                                        .queue(queue)
-                                        .ifUnused(ifUnused)
-                                        .ifEmpty(ifEmpty)
-                                        .nowait(true)
-                                        .build()));
+                .queue(queue)
+                .ifUnused(ifUnused)
+                .ifEmpty(ifEmpty)
+                .nowait(true)
+                .build()));
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public Queue.DeleteOk queueDelete(String queue)
-        throws IOException
-    {
+            throws IOException {
         return queueDelete(queue, false, false);
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public Queue.BindOk queueBind(String queue, String exchange,
                                   String routingKey, Map<String, Object> arguments)
-        throws IOException
-    {
+            throws IOException {
         validateQueueNameLength(queue);
         return (Queue.BindOk)
-               exnWrappingRpc(new Queue.Bind.Builder()
-                               .queue(queue)
-                               .exchange(exchange)
-                               .routingKey(routingKey)
-                               .arguments(arguments)
-                              .build())
-               .getMethod();
+                exnWrappingRpc(new Queue.Bind.Builder()
+                        .queue(queue)
+                        .exchange(exchange)
+                        .routingKey(routingKey)
+                        .arguments(arguments)
+                        .build())
+                        .getMethod();
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public Queue.BindOk queueBind(String queue, String exchange, String routingKey)
-        throws IOException
-    {
+            throws IOException {
         return queueBind(queue, exchange, routingKey, null);
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public void queueBindNoWait(String queue,
                                 String exchange,
@@ -1118,72 +1201,76 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
                                 Map<String, Object> arguments) throws IOException {
         validateQueueNameLength(queue);
         transmit(new AMQCommand(new Queue.Bind.Builder()
-                                .queue(queue)
-                                .exchange(exchange)
-                                .routingKey(routingKey)
-                                .arguments(arguments)
-                                .nowait(true)
-                                .build()));
+                .queue(queue)
+                .exchange(exchange)
+                .routingKey(routingKey)
+                .arguments(arguments)
+                .nowait(true)
+                .build()));
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public Queue.UnbindOk queueUnbind(String queue, String exchange, String routingKey,
                                       Map<String, Object> arguments)
-        throws IOException
-    {
+            throws IOException {
         validateQueueNameLength(queue);
         return (Queue.UnbindOk)
-               exnWrappingRpc(new Queue.Unbind.Builder()
-                               .queue(queue)
-                               .exchange(exchange)
-                               .routingKey(routingKey)
-                               .arguments(arguments)
-                              .build())
-               .getMethod();
+                exnWrappingRpc(new Queue.Unbind.Builder()
+                        .queue(queue)
+                        .exchange(exchange)
+                        .routingKey(routingKey)
+                        .arguments(arguments)
+                        .build())
+                        .getMethod();
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public Queue.PurgeOk queuePurge(String queue)
-        throws IOException
-    {
+            throws IOException {
         validateQueueNameLength(queue);
         return (Queue.PurgeOk)
-               exnWrappingRpc(new Queue.Purge.Builder()
-                               .queue(queue)
-                              .build())
-               .getMethod();
+                exnWrappingRpc(new Queue.Purge.Builder()
+                        .queue(queue)
+                        .build())
+                        .getMethod();
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public Queue.UnbindOk queueUnbind(String queue, String exchange, String routingKey)
-        throws IOException
-    {
+            throws IOException {
         return queueUnbind(queue, exchange, routingKey, null);
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public GetResponse basicGet(String queue, boolean autoAck)
-        throws IOException
-    {
+            throws IOException {
         validateQueueNameLength(queue);
         AMQCommand replyCommand = exnWrappingRpc(new Basic.Get.Builder()
-                                                  .queue(queue)
-                                                  .noAck(autoAck)
-                                                 .build());
+                .queue(queue)
+                .noAck(autoAck)
+                .build());
         return this.observationCollector.basicGet(() -> {
             Method method = replyCommand.getMethod();
 
             if (method instanceof Basic.GetOk) {
-                Basic.GetOk getOk = (Basic.GetOk)method;
+                Basic.GetOk getOk = (Basic.GetOk) method;
                 Envelope envelope = new Envelope(getOk.getDeliveryTag(),
-                    getOk.getRedelivered(),
-                    getOk.getExchange(),
-                    getOk.getRoutingKey());
-                BasicProperties props = (BasicProperties)replyCommand.getContentHeader();
+                        getOk.getRedelivered(),
+                        getOk.getExchange(),
+                        getOk.getRoutingKey());
+                BasicProperties props = (BasicProperties) replyCommand.getContentHeader();
                 byte[] body = replyCommand.getContentBody();
                 int messageCount = getOk.getMessageCount();
 
@@ -1198,76 +1285,91 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
         }, queue);
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public void basicAck(long deliveryTag, boolean multiple)
-        throws IOException
-    {
+            throws IOException {
         transmit(new Basic.Ack(deliveryTag, multiple));
         metricsCollector.basicAck(this, deliveryTag, multiple);
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public void basicNack(long deliveryTag, boolean multiple, boolean requeue)
-        throws IOException
-    {
+            throws IOException {
         transmit(new Basic.Nack(deliveryTag, multiple, requeue));
         metricsCollector.basicNack(this, deliveryTag);
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public void basicReject(long deliveryTag, boolean requeue)
-        throws IOException
-    {
+            throws IOException {
         transmit(new Basic.Reject(deliveryTag, requeue));
         metricsCollector.basicReject(this, deliveryTag);
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public String basicConsume(String queue, Consumer callback)
-        throws IOException
-    {
+            throws IOException {
         return basicConsume(queue, false, callback);
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public String basicConsume(String queue, DeliverCallback deliverCallback, CancelCallback cancelCallback) throws IOException {
         return basicConsume(queue, consumerFromDeliverCancelCallbacks(deliverCallback, cancelCallback));
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public String basicConsume(String queue, DeliverCallback deliverCallback, ConsumerShutdownSignalCallback shutdownSignalCallback) throws IOException {
         return basicConsume(queue, consumerFromDeliverShutdownCallbacks(deliverCallback, shutdownSignalCallback));
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public String basicConsume(String queue, DeliverCallback deliverCallback, CancelCallback cancelCallback,
-        ConsumerShutdownSignalCallback shutdownSignalCallback) throws IOException {
+                               ConsumerShutdownSignalCallback shutdownSignalCallback) throws IOException {
         return basicConsume(queue, consumerFromDeliverCancelShutdownCallbacks(deliverCallback, cancelCallback, shutdownSignalCallback));
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public String basicConsume(String queue, boolean autoAck, Consumer callback)
-        throws IOException
-    {
+            throws IOException {
         return basicConsume(queue, autoAck, "", callback);
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public String basicConsume(String queue, boolean autoAck, DeliverCallback deliverCallback, ConsumerShutdownSignalCallback shutdownSignalCallback)
-        throws IOException {
+            throws IOException {
         return basicConsume(queue, autoAck, "", consumerFromDeliverShutdownCallbacks(deliverCallback, shutdownSignalCallback));
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public String basicConsume(String queue, boolean autoAck, DeliverCallback deliverCallback, CancelCallback cancelCallback) throws IOException {
         return basicConsume(queue, autoAck, "", consumerFromDeliverCancelCallbacks(deliverCallback, cancelCallback));
@@ -1275,105 +1377,124 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
 
     @Override
     public String basicConsume(String queue, boolean autoAck, DeliverCallback deliverCallback, CancelCallback cancelCallback,
-        ConsumerShutdownSignalCallback shutdownSignalCallback) throws IOException {
+                               ConsumerShutdownSignalCallback shutdownSignalCallback) throws IOException {
         return basicConsume(queue, autoAck, "", consumerFromDeliverCancelShutdownCallbacks(deliverCallback, cancelCallback, shutdownSignalCallback));
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public String basicConsume(String queue, boolean autoAck, Map<String, Object> arguments,
                                Consumer callback)
-        throws IOException
-    {
+            throws IOException {
         return basicConsume(queue, autoAck, "", false, false, arguments, callback);
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public String basicConsume(String queue, boolean autoAck, Map<String, Object> arguments, DeliverCallback deliverCallback, CancelCallback cancelCallback)
-        throws IOException {
+            throws IOException {
         return basicConsume(queue, autoAck, "", false, false, arguments, consumerFromDeliverCancelCallbacks(deliverCallback, cancelCallback));
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public String basicConsume(String queue, boolean autoAck, Map<String, Object> arguments, DeliverCallback deliverCallback,
-        ConsumerShutdownSignalCallback shutdownSignalCallback) throws IOException {
+                               ConsumerShutdownSignalCallback shutdownSignalCallback) throws IOException {
         return basicConsume(queue, autoAck, "", false, false, arguments, consumerFromDeliverShutdownCallbacks(deliverCallback, shutdownSignalCallback));
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public String basicConsume(String queue, boolean autoAck, Map<String, Object> arguments, DeliverCallback deliverCallback, CancelCallback cancelCallback,
-        ConsumerShutdownSignalCallback shutdownSignalCallback) throws IOException {
+                               ConsumerShutdownSignalCallback shutdownSignalCallback) throws IOException {
         return basicConsume(queue, autoAck, "", false, false, arguments, consumerFromDeliverCancelShutdownCallbacks(deliverCallback, cancelCallback, shutdownSignalCallback));
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public String basicConsume(String queue, boolean autoAck, String consumerTag,
                                Consumer callback)
-        throws IOException
-    {
+            throws IOException {
         return basicConsume(queue, autoAck, consumerTag, false, false, null, callback);
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public String basicConsume(String queue, boolean autoAck, String consumerTag, DeliverCallback deliverCallback, CancelCallback cancelCallback)
-        throws IOException {
+            throws IOException {
         return basicConsume(queue, autoAck, consumerTag, false, false, null, consumerFromDeliverCancelCallbacks(deliverCallback, cancelCallback));
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public String basicConsume(String queue, boolean autoAck, String consumerTag, DeliverCallback deliverCallback,
-        ConsumerShutdownSignalCallback shutdownSignalCallback) throws IOException {
+                               ConsumerShutdownSignalCallback shutdownSignalCallback) throws IOException {
         return basicConsume(queue, autoAck, consumerTag, false, false, null, consumerFromDeliverShutdownCallbacks(deliverCallback, shutdownSignalCallback));
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public String basicConsume(String queue, boolean autoAck, String consumerTag, DeliverCallback deliverCallback, CancelCallback cancelCallback,
-        ConsumerShutdownSignalCallback shutdownSignalCallback) throws IOException {
-        return basicConsume(queue, autoAck, consumerTag , false, false, null, consumerFromDeliverCancelShutdownCallbacks(deliverCallback, cancelCallback, shutdownSignalCallback));
+                               ConsumerShutdownSignalCallback shutdownSignalCallback) throws IOException {
+        return basicConsume(queue, autoAck, consumerTag, false, false, null, consumerFromDeliverCancelShutdownCallbacks(deliverCallback, cancelCallback, shutdownSignalCallback));
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public String basicConsume(String queue, boolean autoAck, String consumerTag, boolean noLocal, boolean exclusive, Map<String, Object> arguments,
-        DeliverCallback deliverCallback, CancelCallback cancelCallback) throws IOException {
+                               DeliverCallback deliverCallback, CancelCallback cancelCallback) throws IOException {
         return basicConsume(queue, autoAck, consumerTag, noLocal, exclusive, arguments, consumerFromDeliverCancelCallbacks(deliverCallback, cancelCallback));
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public String basicConsume(String queue, boolean autoAck, String consumerTag, boolean noLocal, boolean exclusive, Map<String, Object> arguments,
-        DeliverCallback deliverCallback, ConsumerShutdownSignalCallback shutdownSignalCallback) throws IOException {
+                               DeliverCallback deliverCallback, ConsumerShutdownSignalCallback shutdownSignalCallback) throws IOException {
         return basicConsume(queue, autoAck, consumerTag, noLocal, exclusive, arguments, consumerFromDeliverShutdownCallbacks(deliverCallback, shutdownSignalCallback));
     }
 
     @Override
     public String basicConsume(String queue, boolean autoAck, String consumerTag, boolean noLocal, boolean exclusive, Map<String, Object> arguments,
-        DeliverCallback deliverCallback, CancelCallback cancelCallback, ConsumerShutdownSignalCallback shutdownSignalCallback) throws IOException {
+                               DeliverCallback deliverCallback, CancelCallback cancelCallback, ConsumerShutdownSignalCallback shutdownSignalCallback) throws IOException {
         return basicConsume(queue, autoAck, consumerTag, noLocal, exclusive, arguments, consumerFromDeliverCancelShutdownCallbacks(deliverCallback, cancelCallback, shutdownSignalCallback));
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public String basicConsume(String queue, final boolean autoAck, String consumerTag,
                                boolean noLocal, boolean exclusive, Map<String, Object> arguments,
                                final Consumer callback)
-        throws IOException
-    {
+            throws IOException {
         final Method m = new Basic.Consume.Builder()
-            .queue(queue)
-            .consumerTag(consumerTag)
-            .noLocal(noLocal)
-            .noAck(autoAck)
-            .exclusive(exclusive)
-            .arguments(arguments)
-            .build();
+                .queue(queue)
+                .consumerTag(consumerTag)
+                .noLocal(noLocal)
+                .noAck(autoAck)
+                .exclusive(exclusive)
+                .arguments(arguments)
+                .build();
         BlockingRpcContinuation<String> k = new BlockingRpcContinuation<String>(m) {
             @Override
             public String transformReply(AMQCommand replyCommand) {
@@ -1393,7 +1514,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
         rpc(m, k);
 
         try {
-            if(_rpcTimeout == NO_RPC_TIMEOUT) {
+            if (_rpcTimeout == NO_RPC_TIMEOUT) {
                 return k.getReply();
             } else {
                 try {
@@ -1402,7 +1523,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
                     throw wrapTimeoutException(m, e);
                 }
             }
-        } catch(ShutdownSignalException ex) {
+        } catch (ShutdownSignalException ex) {
             throw wrap(ex);
         }
     }
@@ -1411,10 +1532,12 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
         return new Consumer() {
 
             @Override
-            public void handleConsumeOk(String consumerTag) { }
+            public void handleConsumeOk(String consumerTag) {
+            }
 
             @Override
-            public void handleCancelOk(String consumerTag) { }
+            public void handleCancelOk(String consumerTag) {
+            }
 
             @Override
             public void handleCancel(String consumerTag) throws IOException {
@@ -1422,10 +1545,12 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
             }
 
             @Override
-            public void handleShutdownSignal(String consumerTag, ShutdownSignalException sig) { }
+            public void handleShutdownSignal(String consumerTag, ShutdownSignalException sig) {
+            }
 
             @Override
-            public void handleRecoverOk(String consumerTag) { }
+            public void handleRecoverOk(String consumerTag) {
+            }
 
             @Override
             public void handleDelivery(String consumerTag, Envelope envelope, BasicProperties properties, byte[] body) throws IOException {
@@ -1437,13 +1562,16 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
     private Consumer consumerFromDeliverShutdownCallbacks(final DeliverCallback deliverCallback, final ConsumerShutdownSignalCallback shutdownSignalCallback) {
         return new Consumer() {
             @Override
-            public void handleConsumeOk(String consumerTag) { }
+            public void handleConsumeOk(String consumerTag) {
+            }
 
             @Override
-            public void handleCancelOk(String consumerTag) { }
+            public void handleCancelOk(String consumerTag) {
+            }
 
             @Override
-            public void handleCancel(String consumerTag) throws IOException { }
+            public void handleCancel(String consumerTag) throws IOException {
+            }
 
             @Override
             public void handleShutdownSignal(String consumerTag, ShutdownSignalException sig) {
@@ -1451,7 +1579,8 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
             }
 
             @Override
-            public void handleRecoverOk(String consumerTag) { }
+            public void handleRecoverOk(String consumerTag) {
+            }
 
             @Override
             public void handleDelivery(String consumerTag, Envelope envelope, BasicProperties properties, byte[] body) throws IOException {
@@ -1463,10 +1592,12 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
     private Consumer consumerFromDeliverCancelShutdownCallbacks(final DeliverCallback deliverCallback, final CancelCallback cancelCallback, final ConsumerShutdownSignalCallback shutdownSignalCallback) {
         return new Consumer() {
             @Override
-            public void handleConsumeOk(String consumerTag) { }
+            public void handleConsumeOk(String consumerTag) {
+            }
 
             @Override
-            public void handleCancelOk(String consumerTag) { }
+            public void handleCancelOk(String consumerTag) {
+            }
 
             @Override
             public void handleCancel(String consumerTag) throws IOException {
@@ -1479,7 +1610,8 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
             }
 
             @Override
-            public void handleRecoverOk(String consumerTag) { }
+            public void handleRecoverOk(String consumerTag) {
+            }
 
             @Override
             public void handleDelivery(String consumerTag, Envelope envelope, BasicProperties properties, byte[] body) throws IOException {
@@ -1488,11 +1620,12 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
         };
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public void basicCancel(final String consumerTag)
-        throws IOException
-    {
+            throws IOException {
         final Consumer originalConsumer = _consumers.get(consumerTag);
         if (originalConsumer == null) {
             LOGGER.warn("Tried to cancel consumer with unknown tag {}", consumerTag);
@@ -1515,7 +1648,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
         rpc(m, k);
 
         try {
-            if(_rpcTimeout == NO_RPC_TIMEOUT) {
+            if (_rpcTimeout == NO_RPC_TIMEOUT) {
                 k.getReply(); // discard result
             } else {
                 try {
@@ -1524,72 +1657,80 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
                     throw wrapTimeoutException(m, e);
                 }
             }
-        } catch(ShutdownSignalException ex) {
+        } catch (ShutdownSignalException ex) {
             throw wrap(ex);
         }
         metricsCollector.basicCancel(this, consumerTag);
     }
 
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public Basic.RecoverOk basicRecover()
-        throws IOException
-    {
+            throws IOException {
         return basicRecover(true);
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public Basic.RecoverOk basicRecover(boolean requeue)
-        throws IOException
-    {
+            throws IOException {
         return (Basic.RecoverOk) exnWrappingRpc(new Basic.Recover(requeue)).getMethod();
     }
 
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public Tx.SelectOk txSelect()
-        throws IOException
-    {
+            throws IOException {
         return (Tx.SelectOk) exnWrappingRpc(new Tx.Select()).getMethod();
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public Tx.CommitOk txCommit()
-        throws IOException
-    {
+            throws IOException {
         return (Tx.CommitOk) exnWrappingRpc(new Tx.Commit()).getMethod();
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public Tx.RollbackOk txRollback()
-        throws IOException
-    {
+            throws IOException {
         return (Tx.RollbackOk) exnWrappingRpc(new Tx.Rollback()).getMethod();
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public Confirm.SelectOk confirmSelect()
-        throws IOException
-    {
+            throws IOException {
         if (confirmSelectActivated) {
             return new Confirm.SelectOk();
         }
 
         if (nextPublishSeqNo == 0) nextPublishSeqNo = 1;
         Confirm.SelectOk result = (Confirm.SelectOk)
-            exnWrappingRpc(new Confirm.Select(false)).getMethod();
+                exnWrappingRpc(new Confirm.Select(false)).getMethod();
 
         confirmSelectActivated = true;
         return result;
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public long getNextPublishSeqNo() {
         return nextPublishSeqNo;
@@ -1645,8 +1786,8 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
     }
 
     private static void validateQueueNameLength(String queue) {
-        if(queue.length() > 255) {
-           throw new IllegalArgumentException("queue name must be no more than 255 characters long");
+        if (queue.length() > 255) {
+            throw new IllegalArgumentException("queue name must be no more than 255 characters long");
         }
     }
 

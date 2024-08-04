@@ -46,7 +46,7 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 
 /**
  * Convenience factory class to facilitate opening a {@link Connection} to a RabbitMQ node.
- *
+ * <p>
  * Most connection and socket settings are configured using this factory.
  * Some settings that apply to connections can also be configured here
  * and will apply to all connections produced by this factory.
@@ -55,86 +55,116 @@ public class ConnectionFactory implements Cloneable {
 
     private static final int MAX_UNSIGNED_SHORT = 65535;
 
-    /** Default user name */
+    /**
+     * Default user name
+     */
     public static final String DEFAULT_USER = "guest";
-    /** Default password */
+    /**
+     * Default password
+     */
     public static final String DEFAULT_PASS = "guest";
-    /** Default virtual host */
+    /**
+     * Default virtual host
+     */
     public static final String DEFAULT_VHOST = "/";
-    /** Default maximum channel number;
-     *  2047 because it's 2048 on the server side minus channel 0,
-     *  which each connection uses for negotiation
-     *  and error communication */
-    public static final int    DEFAULT_CHANNEL_MAX = 2047;
-    /** Default maximum frame size;
-     *  zero means no limit */
-    public static final int    DEFAULT_FRAME_MAX = 0;
-    /** Default heart-beat interval;
-     *  60 seconds */
-    public static final int    DEFAULT_HEARTBEAT = 60;
-    /** The default host */
+    /**
+     * Default maximum channel number;
+     * 2047 because it's 2048 on the server side minus channel 0,
+     * which each connection uses for negotiation
+     * and error communication
+     */
+    public static final int DEFAULT_CHANNEL_MAX = 2047;
+    /**
+     * Default maximum frame size;
+     * zero means no limit
+     */
+    public static final int DEFAULT_FRAME_MAX = 0;
+    /**
+     * Default heart-beat interval;
+     * 60 seconds
+     */
+    public static final int DEFAULT_HEARTBEAT = 60;
+    /**
+     * The default host
+     */
     public static final String DEFAULT_HOST = "localhost";
-    /** 'Use the default port' port */
-    public static final int    USE_DEFAULT_PORT = -1;
-    /** The default non-ssl port */
-    public static final int    DEFAULT_AMQP_PORT = AMQP.PROTOCOL.PORT;
-    /** The default ssl port */
-    public static final int    DEFAULT_AMQP_OVER_SSL_PORT = 5671;
-    /** The default TCP connection timeout: 60 seconds */
-    public static final int    DEFAULT_CONNECTION_TIMEOUT = 60000;
+    /**
+     * 'Use the default port' port
+     */
+    public static final int USE_DEFAULT_PORT = -1;
+    /**
+     * The default non-ssl port
+     */
+    public static final int DEFAULT_AMQP_PORT = AMQP.PROTOCOL.PORT;
+    /**
+     * The default ssl port
+     */
+    public static final int DEFAULT_AMQP_OVER_SSL_PORT = 5671;
+    /**
+     * The default TCP connection timeout: 60 seconds
+     */
+    public static final int DEFAULT_CONNECTION_TIMEOUT = 60000;
     /**
      * The default AMQP 0-9-1 connection handshake timeout. See DEFAULT_CONNECTION_TIMEOUT
      * for TCP (socket) connection timeout.
      */
-    public static final int    DEFAULT_HANDSHAKE_TIMEOUT = 10000;
-    /** The default shutdown timeout;
-     *  zero means wait indefinitely */
-    public static final int    DEFAULT_SHUTDOWN_TIMEOUT = 10000;
+    public static final int DEFAULT_HANDSHAKE_TIMEOUT = 10000;
+    /**
+     * The default shutdown timeout;
+     * zero means wait indefinitely
+     */
+    public static final int DEFAULT_SHUTDOWN_TIMEOUT = 10000;
 
-    /** The default continuation timeout for RPC calls in channels: 10 minutes */
-    public static final int    DEFAULT_CHANNEL_RPC_TIMEOUT = (int) MINUTES.toMillis(10);
-    
-    /** The default network recovery interval: 5000 millis */
-    public static final long   DEFAULT_NETWORK_RECOVERY_INTERVAL = 5000;
+    /**
+     * The default continuation timeout for RPC calls in channels: 10 minutes
+     */
+    public static final int DEFAULT_CHANNEL_RPC_TIMEOUT = (int) MINUTES.toMillis(10);
 
-    /** The default timeout for work pool enqueueing: no timeout */
-    public static final int    DEFAULT_WORK_POOL_TIMEOUT = -1;
+    /**
+     * The default network recovery interval: 5000 millis
+     */
+    public static final long DEFAULT_NETWORK_RECOVERY_INTERVAL = 5000;
+
+    /**
+     * The default timeout for work pool enqueueing: no timeout
+     */
+    public static final int DEFAULT_WORK_POOL_TIMEOUT = -1;
 
     private static final String PREFERRED_TLS_PROTOCOL = "TLSv1.2";
 
     private static final String FALLBACK_TLS_PROTOCOL = "TLSv1";
 
-    private String virtualHost                    = DEFAULT_VHOST;
-    private String host                           = DEFAULT_HOST;
-    private int port                              = USE_DEFAULT_PORT;
-    private int requestedChannelMax               = DEFAULT_CHANNEL_MAX;
-    private int requestedFrameMax                 = DEFAULT_FRAME_MAX;
-    private int requestedHeartbeat                = DEFAULT_HEARTBEAT;
-    private int connectionTimeout                 = DEFAULT_CONNECTION_TIMEOUT;
-    private int handshakeTimeout                  = DEFAULT_HANDSHAKE_TIMEOUT;
-    private int shutdownTimeout                   = DEFAULT_SHUTDOWN_TIMEOUT;
+    private String virtualHost = DEFAULT_VHOST;
+    private String host = DEFAULT_HOST;
+    private int port = USE_DEFAULT_PORT;
+    private int requestedChannelMax = DEFAULT_CHANNEL_MAX;
+    private int requestedFrameMax = DEFAULT_FRAME_MAX;
+    private int requestedHeartbeat = DEFAULT_HEARTBEAT;
+    private int connectionTimeout = DEFAULT_CONNECTION_TIMEOUT;
+    private int handshakeTimeout = DEFAULT_HANDSHAKE_TIMEOUT;
+    private int shutdownTimeout = DEFAULT_SHUTDOWN_TIMEOUT;
     private Map<String, Object> _clientProperties = AMQConnection.defaultClientProperties();
-    private SocketFactory socketFactory           = null;
-    private SaslConfig saslConfig                 = DefaultSaslConfig.PLAIN;
+    private SocketFactory socketFactory = null;
+    private SaslConfig saslConfig = DefaultSaslConfig.PLAIN;
 
     private ExecutorService sharedExecutor;
-    private ThreadFactory threadFactory             = Executors.defaultThreadFactory();
+    private ThreadFactory threadFactory = Executors.defaultThreadFactory();
     // minimises the number of threads rapid closure of many
     // connections uses, see rabbitmq/rabbitmq-java-client#86
     private ExecutorService shutdownExecutor;
     private ScheduledExecutorService heartbeatExecutor;
-    private SocketConfigurator socketConf           = SocketConfigurators.defaultConfigurator();
-    private ExceptionHandler exceptionHandler       = new DefaultExceptionHandler();
+    private SocketConfigurator socketConf = SocketConfigurators.defaultConfigurator();
+    private ExceptionHandler exceptionHandler = new DefaultExceptionHandler();
     private CredentialsProvider credentialsProvider = new DefaultCredentialsProvider(DEFAULT_USER, DEFAULT_PASS);
 
-    private boolean automaticRecovery               = true;
-    private boolean topologyRecovery                = true;
+    private boolean automaticRecovery = true;
+    private boolean topologyRecovery = true;
     private ExecutorService topologyRecoveryExecutor;
-    
+
     // long is used to make sure the users can use both ints
     // and longs safely. It is unlikely that anybody'd need
     // to use recovery intervals > Integer.MAX_VALUE in practice.
-    private long networkRecoveryInterval          = DEFAULT_NETWORK_RECOVERY_INTERVAL;
+    private long networkRecoveryInterval = DEFAULT_NETWORK_RECOVERY_INTERVAL;
     private RecoveryDelayHandler recoveryDelayHandler;
 
     private MetricsCollector metricsCollector;
@@ -148,6 +178,7 @@ public class ConnectionFactory implements Cloneable {
 
     /**
      * Continuation timeout on RPC calls.
+     *
      * @since 4.1.0
      */
     private int channelRpcTimeout = DEFAULT_CHANNEL_RPC_TIMEOUT;
@@ -155,6 +186,7 @@ public class ConnectionFactory implements Cloneable {
     /**
      * Whether or not channels check the reply type of an RPC call.
      * Default is false.
+     *
      * @since 4.2.0
      */
     private boolean channelShouldCheckRpcResponseType = false;
@@ -163,24 +195,28 @@ public class ConnectionFactory implements Cloneable {
      * Listener called when a connection gets an IO error trying to write on the socket.
      * Default listener triggers connection recovery asynchronously and propagates
      * the exception.
+     *
      * @since 4.5.0
      */
     private ErrorOnWriteListener errorOnWriteListener;
 
     /**
      * Timeout in ms for work pool enqueuing.
+     *
      * @since 4.5.0
      */
     private int workPoolTimeout = DEFAULT_WORK_POOL_TIMEOUT;
 
     /**
      * Filter to include/exclude entities from topology recovery.
+     *
      * @since 4.8.0
      */
     private TopologyRecoveryFilter topologyRecoveryFilter;
 
     /**
      * Condition to trigger automatic connection recovery.
+     *
      * @since 5.4.0
      */
     private Predicate<ShutdownSignalException> connectionRecoveryTriggeringCondition;
@@ -188,6 +224,7 @@ public class ConnectionFactory implements Cloneable {
     /**
      * Retry handler for topology recovery.
      * Default is no retry.
+     *
      * @since 5.4.0
      */
     private RetryHandler topologyRecoveryRetryHandler;
@@ -211,12 +248,16 @@ public class ConnectionFactory implements Cloneable {
      */
     private int maxInboundMessageBodySize = 1_048_576 * 64;
 
-    /** @return the default host to use for connections */
+    /**
+     * @return the default host to use for connections
+     */
     public String getHost() {
         return host;
     }
 
-    /** @param host the default host to use for connections */
+    /**
+     * @param host the default host to use for connections
+     */
     public ConnectionFactory setHost(String host) {
         this.host = host;
         return this;
@@ -228,13 +269,16 @@ public class ConnectionFactory implements Cloneable {
         else return DEFAULT_AMQP_PORT;
     }
 
-    /** @return the default port to use for connections */
+    /**
+     * @return the default port to use for connections
+     */
     public int getPort() {
         return portOrDefault(port, isSSL());
     }
 
     /**
      * Set the target port.
+     *
      * @param port the default port to use for connections
      */
     public ConnectionFactory setPort(int port) {
@@ -244,6 +288,7 @@ public class ConnectionFactory implements Cloneable {
 
     /**
      * Retrieve the user name.
+     *
      * @return the AMQP user name to use when connecting to the broker
      */
     public String getUsername() {
@@ -252,18 +297,20 @@ public class ConnectionFactory implements Cloneable {
 
     /**
      * Set the user name.
+     *
      * @param username the AMQP user name to use when connecting to the broker
      */
     public ConnectionFactory setUsername(String username) {
         this.credentialsProvider = new DefaultCredentialsProvider(
-            username,
-            this.credentialsProvider.getPassword()
+                username,
+                this.credentialsProvider.getPassword()
         );
         return this;
     }
 
     /**
      * Retrieve the password.
+     *
      * @return the password to use when connecting to the broker
      */
     public String getPassword() {
@@ -272,12 +319,13 @@ public class ConnectionFactory implements Cloneable {
 
     /**
      * Set the password.
+     *
      * @param password the password to use when connecting to the broker
      */
     public ConnectionFactory setPassword(String password) {
         this.credentialsProvider = new DefaultCredentialsProvider(
-            this.credentialsProvider.getUsername(),
-            password
+                this.credentialsProvider.getUsername(),
+                password
         );
         return this;
     }
@@ -285,6 +333,7 @@ public class ConnectionFactory implements Cloneable {
     /**
      * Set a custom credentials provider.
      * Default implementation uses static username and password.
+     *
      * @param credentialsProvider The custom implementation of CredentialsProvider to use when connecting to the broker.
      * @see com.rabbitmq.client.impl.DefaultCredentialsProvider
      * @since 4.5.0
@@ -293,9 +342,10 @@ public class ConnectionFactory implements Cloneable {
         this.credentialsProvider = credentialsProvider;
         return this;
     }
-    
+
     /**
      * Retrieve the virtual host.
+     *
      * @return the virtual host to use when connecting to the broker
      */
     public String getVirtualHost() {
@@ -304,6 +354,7 @@ public class ConnectionFactory implements Cloneable {
 
     /**
      * Set the virtual host.
+     *
      * @param virtualHost the virtual host to use when connecting to the broker
      */
     public ConnectionFactory setVirtualHost(String virtualHost) {
@@ -317,11 +368,11 @@ public class ConnectionFactory implements Cloneable {
      * port, username, password and virtual host.  If any part of the
      * URI is omitted, the ConnectionFactory's corresponding variable
      * is left unchanged.
+     *
      * @param uri is the AMQP URI containing the data
      */
     public ConnectionFactory setUri(URI uri)
-        throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException
-    {
+            throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException {
         if ("amqp".equals(uri.getScheme().toLowerCase())) {
             // nothing special to do
         } else if ("amqps".equals(uri.getScheme().toLowerCase())) {
@@ -332,7 +383,7 @@ public class ConnectionFactory implements Cloneable {
             }
         } else {
             throw new IllegalArgumentException("Wrong scheme in AMQP URI: " +
-                                               uri.getScheme());
+                    uri.getScheme());
         }
 
         String host = uri.getHost();
@@ -350,7 +401,7 @@ public class ConnectionFactory implements Cloneable {
             String userPass[] = userInfo.split(":");
             if (userPass.length > 2) {
                 throw new IllegalArgumentException("Bad user info in AMQP " +
-                                                   "URI: " + userInfo);
+                        "URI: " + userInfo);
             }
 
             setUsername(uriDecode(userPass[0]));
@@ -363,13 +414,13 @@ public class ConnectionFactory implements Cloneable {
         if (path != null && path.length() > 0) {
             if (path.indexOf('/', 1) != -1) {
                 throw new IllegalArgumentException("Multiple segments in " +
-                                                   "path of AMQP URI: " +
-                                                   path);
+                        "path of AMQP URI: " +
+                        path);
             }
 
             setVirtualHost(uriDecode(uri.getPath().substring(1)));
         }
-        
+
         String rawQuery = uri.getRawQuery();
         if (rawQuery != null && rawQuery.length() > 0) {
             setQuery(rawQuery);
@@ -385,11 +436,11 @@ public class ConnectionFactory implements Cloneable {
      * accepted; in particular, the hostname must be given if the
      * port, username or password are given, and escapes in the
      * hostname are not permitted.
+     *
      * @param uriString is the AMQP URI containing the data
      */
     public ConnectionFactory setUri(String uriString)
-        throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException
-    {
+            throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException {
         setUri(new URI(uriString));
         return this;
     }
@@ -399,47 +450,47 @@ public class ConnectionFactory implements Cloneable {
             // URLDecode decodes '+' to a space, as for
             // form encoding.  So protect plus signs.
             return URLDecoder.decode(s.replace("+", "%2B"), "US-ASCII");
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-  private static final Map<String, BiConsumer<String, ConnectionFactory>> URI_QUERY_PARAMETER_HANDLERS =
-      new HashMap<String, BiConsumer<String, ConnectionFactory>>() {
-        {
-            put("heartbeat", (value, cf) -> {
-                try {
-                    int heartbeatInt = Integer.parseInt(value);
-                    cf.setRequestedHeartbeat(heartbeatInt);
-                } catch (NumberFormatException e) {
-                    throw new IllegalArgumentException("Requested heartbeat must an integer");
+    private static final Map<String, BiConsumer<String, ConnectionFactory>> URI_QUERY_PARAMETER_HANDLERS =
+            new HashMap<String, BiConsumer<String, ConnectionFactory>>() {
+                {
+                    put("heartbeat", (value, cf) -> {
+                        try {
+                            int heartbeatInt = Integer.parseInt(value);
+                            cf.setRequestedHeartbeat(heartbeatInt);
+                        } catch (NumberFormatException e) {
+                            throw new IllegalArgumentException("Requested heartbeat must an integer");
+                        }
+                    });
+                    put("connection_timeout", (value, cf) -> {
+                        try {
+                            int connectionTimeoutInt = Integer.parseInt(value);
+                            cf.setConnectionTimeout(connectionTimeoutInt);
+                        } catch (NumberFormatException e) {
+                            throw new IllegalArgumentException("TCP connection timeout must an integer");
+                        }
+                    });
+                    put("channel_max", (value, cf) -> {
+                        try {
+                            int channelMaxInt = Integer.parseInt(value);
+                            cf.setRequestedChannelMax(channelMaxInt);
+                        } catch (NumberFormatException e) {
+                            throw new IllegalArgumentException("Requested channel max must an integer");
+                        }
+                    });
                 }
-            });
-            put("connection_timeout", (value, cf) -> {
-              try {
-                int connectionTimeoutInt = Integer.parseInt(value);
-                cf.setConnectionTimeout(connectionTimeoutInt);
-              } catch (NumberFormatException e) {
-                throw new IllegalArgumentException("TCP connection timeout must an integer");
-              }
-            });
-            put("channel_max", (value, cf) -> {
-                try {
-                    int channelMaxInt = Integer.parseInt(value);
-                    cf.setRequestedChannelMax(channelMaxInt);
-                } catch (NumberFormatException e) {
-                    throw new IllegalArgumentException("Requested channel max must an integer");
-                }
-            });
-        }
-      };
+            };
 
     /**
      * Convenience method for setting some fields from query parameters
      * Will handle only a subset of the query parameters supported by the
      * official erlang client
      * https://www.rabbitmq.com/uri-query-parameters.html
+     *
      * @param rawQuery is the string containing the raw query parameters part from a URI
      */
     private ConnectionFactory setQuery(String rawQuery) {
@@ -461,7 +512,7 @@ public class ConnectionFactory implements Cloneable {
 
         for (Entry<String, String> entry : parameters.entrySet()) {
             BiConsumer<String, ConnectionFactory> handler = URI_QUERY_PARAMETER_HANDLERS
-                .get(entry.getKey());
+                    .get(entry.getKey());
             if (handler != null) {
                 handler.accept(entry.getValue(), this);
             } else {
@@ -475,6 +526,7 @@ public class ConnectionFactory implements Cloneable {
      * Hook to process query parameters not handled natively.
      * Handled natively: <code>heartbeat</code>, <code>connection_timeout</code>,
      * <code>channel_max</code>.
+     *
      * @param key
      * @param value
      */
@@ -484,6 +536,7 @@ public class ConnectionFactory implements Cloneable {
 
     /**
      * Retrieve the requested maximum channel number
+     *
      * @return the initially requested maximum channel number; zero for unlimited
      */
     public int getRequestedChannelMax() {
@@ -507,6 +560,7 @@ public class ConnectionFactory implements Cloneable {
 
     /**
      * Retrieve the requested maximum frame size
+     *
      * @return the initially requested maximum frame size, in octets; zero for unlimited
      */
     public int getRequestedFrameMax() {
@@ -515,6 +569,7 @@ public class ConnectionFactory implements Cloneable {
 
     /**
      * Set the requested maximum frame size
+     *
      * @param requestedFrameMax initially requested maximum frame size, in octets; zero for unlimited
      */
     public ConnectionFactory setRequestedFrameMax(int requestedFrameMax) {
@@ -524,6 +579,7 @@ public class ConnectionFactory implements Cloneable {
 
     /**
      * Retrieve the requested heartbeat interval.
+     *
      * @return the initially requested heartbeat interval, in seconds; zero for none
      */
     public int getRequestedHeartbeat() {
@@ -532,10 +588,11 @@ public class ConnectionFactory implements Cloneable {
 
     /**
      * Set the TCP connection timeout.
+     *
      * @param timeout connection TCP establishment timeout in milliseconds; zero for infinite
      */
     public ConnectionFactory setConnectionTimeout(int timeout) {
-        if(timeout < 0) {
+        if (timeout < 0) {
             throw new IllegalArgumentException("TCP connection timeout cannot be negative");
         }
         this.connectionTimeout = timeout;
@@ -544,6 +601,7 @@ public class ConnectionFactory implements Cloneable {
 
     /**
      * Retrieve the TCP connection timeout.
+     *
      * @return the TCP connection timeout, in milliseconds; zero for infinite
      */
     public int getConnectionTimeout() {
@@ -552,6 +610,7 @@ public class ConnectionFactory implements Cloneable {
 
     /**
      * Retrieve the AMQP 0-9-1 protocol handshake timeout.
+     *
      * @return the AMQP0-9-1 protocol handshake timeout, in milliseconds
      */
     public int getHandshakeTimeout() {
@@ -560,10 +619,11 @@ public class ConnectionFactory implements Cloneable {
 
     /**
      * Set the AMQP0-9-1 protocol handshake timeout.
+     *
      * @param timeout the AMQP0-9-1 protocol handshake timeout, in milliseconds
      */
     public ConnectionFactory setHandshakeTimeout(int timeout) {
-        if(timeout < 0) {
+        if (timeout < 0) {
             throw new IllegalArgumentException("handshake timeout cannot be negative");
         }
         this.handshakeTimeout = timeout;
@@ -576,6 +636,7 @@ public class ConnectionFactory implements Cloneable {
      * has closed but before the ConsumerWorkService is torn down. If consumers exceed this timeout
      * then any remaining queued deliveries (and other Consumer callbacks, <b>including</b>
      * the Consumer's handleShutdownSignal() invocation) will be lost.
+     *
      * @param shutdownTimeout shutdown timeout in milliseconds; zero for infinite; default 10000
      */
     public ConnectionFactory setShutdownTimeout(int shutdownTimeout) {
@@ -585,6 +646,7 @@ public class ConnectionFactory implements Cloneable {
 
     /**
      * Retrieve the shutdown timeout.
+     *
      * @return the shutdown timeout, in milliseconds; zero for infinite
      */
     public int getShutdownTimeout() {
@@ -615,6 +677,7 @@ public class ConnectionFactory implements Cloneable {
      * startup. Clients may add, delete, and alter keys in this
      * table. Such changes will take effect when the next new
      * connection is started using this factory.
+     *
      * @return the map of client properties
      * @see #setClientProperties
      */
@@ -625,6 +688,7 @@ public class ConnectionFactory implements Cloneable {
     /**
      * Replace the table of client properties that will be sent to the
      * server during subsequent connection startups.
+     *
      * @param clientProperties the map of extra client properties
      * @see #getClientProperties
      */
@@ -635,6 +699,7 @@ public class ConnectionFactory implements Cloneable {
 
     /**
      * Gets the sasl config to use when authenticating
+     *
      * @return the sasl config
      * @see com.rabbitmq.client.SaslConfig
      */
@@ -644,6 +709,7 @@ public class ConnectionFactory implements Cloneable {
 
     /**
      * Sets the sasl config to use when authenticating
+     *
      * @param saslConfig
      * @see com.rabbitmq.client.SaslConfig
      */
@@ -665,6 +731,7 @@ public class ConnectionFactory implements Cloneable {
      * javax.net.ssl.SSLSocketFactory instance.
      * Note this applies only to blocking IO, not to
      * NIO, as the NIO API doesn't use the SocketFactory API.
+     *
      * @see #useSslProtocol
      */
     public ConnectionFactory setSocketFactory(SocketFactory factory) {
@@ -697,7 +764,7 @@ public class ConnectionFactory implements Cloneable {
      * Set the executor to use for consumer operation dispatch
      * by default for newly created connections.
      * All connections that use this executor share it.
-     *
+     * <p>
      * It's developer's responsibility to shut down the executor
      * when it is no longer needed.
      *
@@ -712,7 +779,7 @@ public class ConnectionFactory implements Cloneable {
     /**
      * Set the executor to use for connection shutdown.
      * All connections that use this executor share it.
-     *
+     * <p>
      * It's developer's responsibility to shut down the executor
      * when it is no longer needed.
      *
@@ -727,19 +794,20 @@ public class ConnectionFactory implements Cloneable {
     /**
      * Set the executor to use to send heartbeat frames.
      * All connections that use this executor share it.
-     *
+     * <p>
      * It's developer's responsibility to shut down the executor
      * when it is no longer needed.
      *
-     * @param executor executor service to be used to send heartbeat 
+     * @param executor executor service to be used to send heartbeat
      */
     public ConnectionFactory setHeartbeatExecutor(ScheduledExecutorService executor) {
         this.heartbeatExecutor = executor;
         return this;
     }
-    
+
     /**
      * Retrieve the thread factory used to instantiate new threads.
+     *
      * @see ThreadFactory
      */
     public ThreadFactory getThreadFactory() {
@@ -748,6 +816,7 @@ public class ConnectionFactory implements Cloneable {
 
     /**
      * Set the thread factory used to instantiate new threads.
+     *
      * @see ThreadFactory
      */
     public ConnectionFactory setThreadFactory(ThreadFactory threadFactory) {
@@ -756,27 +825,28 @@ public class ConnectionFactory implements Cloneable {
     }
 
     /**
-    * Get the exception handler.
-    *
-    * @see com.rabbitmq.client.ExceptionHandler
-    */
+     * Get the exception handler.
+     *
+     * @see com.rabbitmq.client.ExceptionHandler
+     */
     public ExceptionHandler getExceptionHandler() {
         return exceptionHandler;
     }
 
     /**
      * Set the exception handler to use for newly created connections.
+     *
      * @see com.rabbitmq.client.ExceptionHandler
      */
     public ConnectionFactory setExceptionHandler(ExceptionHandler exceptionHandler) {
         if (exceptionHandler == null) {
-          throw new IllegalArgumentException("exception handler cannot be null!");
+            throw new IllegalArgumentException("exception handler cannot be null!");
         }
         this.exceptionHandler = exceptionHandler;
         return this;
     }
 
-    public boolean isSSL(){
+    public boolean isSSL() {
         return getSocketFactory() instanceof SSLSocketFactory || sslContextFactory != null;
     }
 
@@ -791,8 +861,7 @@ public class ConnectionFactory implements Cloneable {
      * against man-in-the-middle attacks. Prefer {@link #useSslProtocol(SSLContext)}.
      */
     public ConnectionFactory useSslProtocol()
-        throws NoSuchAlgorithmException, KeyManagementException
-    {
+            throws NoSuchAlgorithmException, KeyManagementException {
         return useSslProtocol(computeDefaultTlsProtocol(SSLContext.getDefault().getSupportedSSLParameters().getProtocols()));
     }
 
@@ -804,17 +873,17 @@ public class ConnectionFactory implements Cloneable {
      * to it, this is convenient for local development but
      * not recommended to use in production as it <strong>provides no protection
      * against man-in-the-middle attacks</strong>.
-     *
+     * <p>
      * Use {@link #useSslProtocol(SSLContext)} in production environments.
      * The produced {@link SSLContext} instance will be shared by all
      * the connections created by this connection factory.
-     *
+     * <p>
      * Use {@link #setSslContextFactory(SslContextFactory)} for more flexibility.
+     *
      * @see #setSslContextFactory(SslContextFactory)
      */
     public ConnectionFactory useSslProtocol(String protocol)
-        throws NoSuchAlgorithmException, KeyManagementException
-    {
+            throws NoSuchAlgorithmException, KeyManagementException {
         return useSslProtocol(protocol, new TrustEverythingTrustManager());
     }
 
@@ -822,21 +891,21 @@ public class ConnectionFactory implements Cloneable {
      * Convenience method for configuring TLS.
      * Pass in the TLS protocol version to use, e.g. "TLSv1.2" or "TLSv1.1", and
      * a desired {@link TrustManager}.
-     *
-     *
+     * <p>
+     * <p>
      * The produced {@link SSLContext} instance will be shared with all
      * the connections created by this connection factory. Use
      * {@link #setSslContextFactory(SslContextFactory)} for more flexibility.
-     * @param protocol the TLS protocol to use.
+     *
+     * @param protocol     the TLS protocol to use.
      * @param trustManager the {@link TrustManager} implementation to use.
      * @see #setSslContextFactory(SslContextFactory)
      * @see #useSslProtocol(SSLContext)
      */
     public ConnectionFactory useSslProtocol(String protocol, TrustManager trustManager)
-        throws NoSuchAlgorithmException, KeyManagementException
-    {
+            throws NoSuchAlgorithmException, KeyManagementException {
         SSLContext c = SSLContext.getInstance(protocol);
-        c.init(null, new TrustManager[] { trustManager }, null);
+        c.init(null, new TrustManager[]{trustManager}, null);
         return useSslProtocol(c);
     }
 
@@ -844,11 +913,12 @@ public class ConnectionFactory implements Cloneable {
      * Sets up TLS with an initialized {@link SSLContext}. The caller is responsible
      * for setting up the context with a {@link TrustManager} with suitable security guarantees,
      * e.g. peer verification.
-     *
-     *
+     * <p>
+     * <p>
      * The {@link SSLContext} instance will be shared with all
      * the connections created by this connection factory. Use
      * {@link #setSslContextFactory(SslContextFactory)} for more flexibility.
+     *
      * @param context An initialized SSLContext
      * @see #setSslContextFactory(SslContextFactory)
      */
@@ -899,9 +969,9 @@ public class ConnectionFactory implements Cloneable {
     }
 
     public static String computeDefaultTlsProtocol(String[] supportedProtocols) {
-        if(supportedProtocols != null) {
+        if (supportedProtocols != null) {
             for (String supportedProtocol : supportedProtocols) {
-                if(PREFERRED_TLS_PROTOCOL.equalsIgnoreCase(supportedProtocol)) {
+                if (PREFERRED_TLS_PROTOCOL.equalsIgnoreCase(supportedProtocol)) {
                     return supportedProtocol;
                 }
             }
@@ -912,6 +982,7 @@ public class ConnectionFactory implements Cloneable {
     /**
      * Returns true if <a href="https://www.rabbitmq.com/api-guide.html#recovery">automatic connection recovery</a>
      * is enabled, false otherwise
+     *
      * @return true if automatic connection recovery is enabled, false otherwise
      * @see <a href="https://www.rabbitmq.com/api-guide.html#recovery">Automatic Recovery</a>
      */
@@ -921,6 +992,7 @@ public class ConnectionFactory implements Cloneable {
 
     /**
      * Enables or disables <a href="https://www.rabbitmq.com/api-guide.html#recovery">automatic connection recovery</a>.
+     *
      * @param automaticRecovery if true, enables connection recovery
      * @see <a href="https://www.rabbitmq.com/api-guide.html#recovery">Automatic Recovery</a>
      */
@@ -931,6 +1003,7 @@ public class ConnectionFactory implements Cloneable {
 
     /**
      * Returns true if topology recovery is enabled, false otherwise
+     *
      * @return true if topology recovery is enabled, false otherwise
      * @see <a href="https://www.rabbitmq.com/api-guide.html#recovery">Automatic Recovery</a>
      */
@@ -940,6 +1013,7 @@ public class ConnectionFactory implements Cloneable {
 
     /**
      * Enables or disables topology recovery
+     *
      * @param topologyRecovery if true, enables topology recovery
      * @see <a href="https://www.rabbitmq.com/api-guide.html#recovery">Automatic Recovery</a>
      */
@@ -947,21 +1021,23 @@ public class ConnectionFactory implements Cloneable {
         this.topologyRecovery = topologyRecovery;
         return this;
     }
-    
+
     /**
      * Get the executor to use for parallel topology recovery. If null (the default), recovery is done single threaded on the main connection thread.
+     *
      * @return thread pool executor
      * @since 4.7.0
      */
     public ExecutorService getTopologyRecoveryExecutor() {
         return topologyRecoveryExecutor;
     }
-    
+
     /**
      * Set the executor to use for parallel topology recovery. If null (the default), recovery is done single threaded on the main connection thread.
      * It is recommended to pass a ThreadPoolExecutor that will allow its core threads to timeout so these threads can die when recovery is complete.
      * It's developer's responsibility to shut down the executor when it is no longer needed.
      * Note: your {@link ExceptionHandler#handleTopologyRecoveryException(Connection, Channel, TopologyRecoveryException)} method should be thread-safe.
+     *
      * @param topologyRecoveryExecutor thread pool executor
      * @since 4.7.0
      */
@@ -979,15 +1055,15 @@ public class ConnectionFactory implements Cloneable {
         return metricsCollector;
     }
 
-  /**
-   * Set observation collector.
-   *
-   * @param observationCollector the collector instance
-   * @since 5.19.0
-   * @see ObservationCollector
-   * @see com.rabbitmq.client.observation.micrometer.MicrometerObservationCollectorBuilder
-   */
-  public void setObservationCollector(ObservationCollector observationCollector) {
+    /**
+     * Set observation collector.
+     *
+     * @param observationCollector the collector instance
+     * @see ObservationCollector
+     * @see com.rabbitmq.client.observation.micrometer.MicrometerObservationCollectorBuilder
+     * @since 5.19.0
+     */
+    public void setObservationCollector(ObservationCollector observationCollector) {
         this.observationCollector = observationCollector;
     }
 
@@ -1012,20 +1088,20 @@ public class ConnectionFactory implements Cloneable {
     }
 
     protected synchronized FrameHandlerFactory createFrameHandlerFactory() throws IOException {
-        if(nio) {
-            if(this.frameHandlerFactory == null) {
-                if(this.nioParams.getNioExecutor() == null && this.nioParams.getThreadFactory() == null) {
+        if (nio) {
+            if (this.frameHandlerFactory == null) {
+                if (this.nioParams.getNioExecutor() == null && this.nioParams.getThreadFactory() == null) {
                     this.nioParams.setThreadFactory(getThreadFactory());
                 }
                 this.frameHandlerFactory = new SocketChannelFrameHandlerFactory(
-                    connectionTimeout, nioParams, isSSL(), sslContextFactory,
-                    this.maxInboundMessageBodySize);
+                        connectionTimeout, nioParams, isSSL(), sslContextFactory,
+                        this.maxInboundMessageBodySize);
             }
             return this.frameHandlerFactory;
         } else {
             return new SocketFrameHandlerFactory(connectionTimeout, socketFactory,
-                socketConf, isSSL(), this.shutdownExecutor, sslContextFactory,
-                this.maxInboundMessageBodySize);
+                    socketConf, isSSL(), this.shutdownExecutor, sslContextFactory,
+                    this.maxInboundMessageBodySize);
         }
 
     }
@@ -1033,7 +1109,7 @@ public class ConnectionFactory implements Cloneable {
     /**
      * Create a new broker connection, picking the first available address from
      * the list.
-     *
+     * <p>
      * If <a href="https://www.rabbitmq.com/api-guide.html#recovery">automatic connection recovery</a>
      * is enabled, the connection returned by this method will be {@link Recoverable}. Future
      * reconnection attempts will pick a random accessible address from the provided list.
@@ -1049,7 +1125,7 @@ public class ConnectionFactory implements Cloneable {
     /**
      * Create a new broker connection, picking the first available address from
      * the list provided by the {@link AddressResolver}.
-     *
+     * <p>
      * If <a href="https://www.rabbitmq.com/api-guide.html#recovery">automatic connection recovery</a>
      * is enabled, the connection returned by this method will be {@link Recoverable}. Future
      * reconnection attempts will pick a random accessible address provided by the {@link AddressResolver}.
@@ -1067,12 +1143,12 @@ public class ConnectionFactory implements Cloneable {
     /**
      * Create a new broker connection with a client-provided name, picking the first available address from
      * the list.
-     *
+     * <p>
      * If <a href="https://www.rabbitmq.com/api-guide.html#recovery">automatic connection recovery</a>
      * is enabled, the connection returned by this method will be {@link Recoverable}. Future
      * reconnection attempts will pick a random accessible address from the provided list.
      *
-     * @param addrs an array of known broker addresses (hostname/port pairs) to try in order
+     * @param addrs              an array of known broker addresses (hostname/port pairs) to try in order
      * @param clientProvidedName application-specific connection name, will be displayed
      *                           in the management UI if RabbitMQ server supports it.
      *                           This value doesn't have to be unique and cannot be used
@@ -1088,7 +1164,7 @@ public class ConnectionFactory implements Cloneable {
     /**
      * Create a new broker connection, picking the first available address from
      * the list.
-     *
+     * <p>
      * If <a href="https://www.rabbitmq.com/api-guide.html#recovery">automatic connection recovery</a>
      * is enabled, the connection returned by this method will be {@link Recoverable}. Future
      * reconnection attempts will pick a random accessible address from the provided list.
@@ -1104,12 +1180,12 @@ public class ConnectionFactory implements Cloneable {
     /**
      * Create a new broker connection with a client-provided name, picking the first available address from
      * the list.
-     *
+     * <p>
      * If <a href="https://www.rabbitmq.com/api-guide.html#recovery">automatic connection recovery</a>
      * is enabled, the connection returned by this method will be {@link Recoverable}. Future
      * reconnection attempts will pick a random accessible address from the provided list.
      *
-     * @param addrs a List of known broker addresses (hostname/port pairs) to try in order
+     * @param addrs              a List of known broker addresses (hostname/port pairs) to try in order
      * @param clientProvidedName application-specific connection name, will be displayed
      *                           in the management UI if RabbitMQ server supports it.
      *                           This value doesn't have to be unique and cannot be used
@@ -1125,13 +1201,13 @@ public class ConnectionFactory implements Cloneable {
     /**
      * Create a new broker connection, picking the first available address from
      * the list.
-     *
+     * <p>
      * If <a href="https://www.rabbitmq.com/api-guide.html#recovery">automatic connection recovery</a>
      * is enabled, the connection returned by this method will be {@link Recoverable}. Future
      * reconnection attempts will pick a random accessible address from the provided list.
      *
      * @param executor thread execution service for consumers on the connection
-     * @param addrs an array of known broker addresses (hostname/port pairs) to try in order
+     * @param addrs    an array of known broker addresses (hostname/port pairs) to try in order
      * @return an interface to the connection
      * @throws java.io.IOException if it encounters a problem
      * @see <a href="https://www.rabbitmq.com/api-guide.html#recovery">Automatic Recovery</a>
@@ -1144,13 +1220,13 @@ public class ConnectionFactory implements Cloneable {
     /**
      * Create a new broker connection with a client-provided name, picking the first available address from
      * the list.
-     *
+     * <p>
      * If <a href="https://www.rabbitmq.com/api-guide.html#recovery">automatic connection recovery</a>
      * is enabled, the connection returned by this method will be {@link Recoverable}. Future
      * reconnection attempts will pick a random accessible address from the provided list.
      *
-     * @param executor thread execution service for consumers on the connection
-     * @param addrs an array of known broker addresses (hostname/port pairs) to try in order
+     * @param executor           thread execution service for consumers on the connection
+     * @param addrs              an array of known broker addresses (hostname/port pairs) to try in order
      * @param clientProvidedName application-specific connection name, will be displayed
      *                           in the management UI if RabbitMQ server supports it.
      *                           This value doesn't have to be unique and cannot be used
@@ -1167,13 +1243,13 @@ public class ConnectionFactory implements Cloneable {
     /**
      * Create a new broker connection, picking the first available address from
      * the list.
-     *
+     * <p>
      * If <a href="https://www.rabbitmq.com/api-guide.html#recovery">automatic connection recovery</a>
      * is enabled, the connection returned by this method will be {@link Recoverable}. Future
      * reconnection attempts will pick a random accessible address from the provided list.
      *
      * @param executor thread execution service for consumers on the connection
-     * @param addrs a List of known broker addrs (hostname/port pairs) to try in order
+     * @param addrs    a List of known broker addrs (hostname/port pairs) to try in order
      * @return an interface to the connection
      * @throws java.io.IOException if it encounters a problem
      * @see <a href="https://www.rabbitmq.com/api-guide.html#recovery">Automatic Recovery</a>
@@ -1185,12 +1261,12 @@ public class ConnectionFactory implements Cloneable {
     /**
      * Create a new broker connection, picking the first available address from
      * the list provided by the {@link AddressResolver}.
-     *
+     * <p>
      * If <a href="https://www.rabbitmq.com/api-guide.html#recovery">automatic connection recovery</a>
      * is enabled, the connection returned by this method will be {@link Recoverable}. Future
      * reconnection attempts will pick a random accessible address provided by the {@link AddressResolver}.
      *
-     * @param executor thread execution service for consumers on the connection
+     * @param executor        thread execution service for consumers on the connection
      * @param addressResolver discovery service to list potential addresses (hostname/port pairs) to connect to
      * @return an interface to the connection
      * @throws java.io.IOException if it encounters a problem
@@ -1203,13 +1279,13 @@ public class ConnectionFactory implements Cloneable {
     /**
      * Create a new broker connection with a client-provided name, picking the first available address from
      * the list.
-     *
+     * <p>
      * If <a href="https://www.rabbitmq.com/api-guide.html#recovery">automatic connection recovery</a>
      * is enabled, the connection returned by this method will be {@link Recoverable}. Future
      * reconnection attempts will pick a random accessible address from the provided list.
      *
-     * @param executor thread execution service for consumers on the connection
-     * @param addrs a List of known broker addrs (hostname/port pairs) to try in order
+     * @param executor           thread execution service for consumers on the connection
+     * @param addrs              a List of known broker addrs (hostname/port pairs) to try in order
      * @param clientProvidedName application-specific connection name, will be displayed
      *                           in the management UI if RabbitMQ server supports it.
      *                           This value doesn't have to be unique and cannot be used
@@ -1227,13 +1303,13 @@ public class ConnectionFactory implements Cloneable {
     /**
      * Create a new broker connection with a client-provided name, picking the first available address from
      * the list provided by the {@link AddressResolver}.
-     *
+     * <p>
      * If <a href="https://www.rabbitmq.com/api-guide.html#recovery">automatic connection recovery</a>
      * is enabled, the connection returned by this method will be {@link Recoverable}. Future
      * reconnection attempts will pick a random accessible address provided by the {@link AddressResolver}.
      *
-     * @param executor thread execution service for consumers on the connection
-     * @param addressResolver discovery service to list potential addresses (hostname/port pairs) to connect to
+     * @param executor           thread execution service for consumers on the connection
+     * @param addressResolver    discovery service to list potential addresses (hostname/port pairs) to connect to
      * @param clientProvidedName application-specific connection name, will be displayed
      *                           in the management UI if RabbitMQ server supports it.
      *                           This value doesn't have to be unique and cannot be used
@@ -1244,8 +1320,8 @@ public class ConnectionFactory implements Cloneable {
      * @see <a href="https://www.rabbitmq.com/api-guide.html#recovery">Automatic Recovery</a>
      */
     public Connection newConnection(ExecutorService executor, AddressResolver addressResolver, String clientProvidedName)
-        throws IOException, TimeoutException {
-        if(this.metricsCollector == null) {
+            throws IOException, TimeoutException {
+        if (this.metricsCollector == null) {
             this.metricsCollector = new NoOpMetricsCollector();
         }
         // make sure we respect the provided thread factory
@@ -1263,7 +1339,7 @@ public class ConnectionFactory implements Cloneable {
             // No Sonar: no need to close this resource because we're the one that creates it
             // and hands it over to the user
             AutorecoveringConnection conn = new AutorecoveringConnection(
-                params, fhFactory, addressResolver, metricsCollector, observationCollector); //NOSONAR
+                    params, fhFactory, addressResolver, metricsCollector, observationCollector); //NOSONAR
 
             conn.init();
             return conn;
@@ -1335,7 +1411,7 @@ public class ConnectionFactory implements Cloneable {
 
     /**
      * Create a new broker connection.
-     *
+     * <p>
      * If <a href="https://www.rabbitmq.com/api-guide.html#recovery">automatic connection recovery</a>
      * is enabled, the connection returned by this method will be {@link Recoverable}. Reconnection
      * attempts will always use the address configured on {@link ConnectionFactory}.
@@ -1349,7 +1425,7 @@ public class ConnectionFactory implements Cloneable {
 
     /**
      * Create a new broker connection.
-     *
+     * <p>
      * If <a href="https://www.rabbitmq.com/api-guide.html#recovery">automatic connection recovery</a>
      * is enabled, the connection returned by this method will be {@link Recoverable}. Reconnection
      * attempts will always use the address configured on {@link ConnectionFactory}.
@@ -1365,7 +1441,7 @@ public class ConnectionFactory implements Cloneable {
 
     /**
      * Create a new broker connection.
-     *
+     * <p>
      * If <a href="https://www.rabbitmq.com/api-guide.html#recovery">automatic connection recovery</a>
      * is enabled, the connection returned by this method will be {@link Recoverable}. Reconnection
      * attempts will always use the address configured on {@link ConnectionFactory}.
@@ -1380,12 +1456,12 @@ public class ConnectionFactory implements Cloneable {
 
     /**
      * Create a new broker connection.
-     *
+     * <p>
      * If <a href="https://www.rabbitmq.com/api-guide.html#recovery">automatic connection recovery</a>
      * is enabled, the connection returned by this method will be {@link Recoverable}. Reconnection
      * attempts will always use the address configured on {@link ConnectionFactory}.
      *
-     * @param executor thread execution service for consumers on the connection
+     * @param executor       thread execution service for consumers on the connection
      * @param connectionName client-provided connection name (an arbitrary string). Will
      *                       be displayed in management UI if the server supports it.
      * @return an interface to the connection
@@ -1405,9 +1481,10 @@ public class ConnectionFactory implements Cloneable {
         }
     }
 
-    @Override public ConnectionFactory clone(){
+    @Override
+    public ConnectionFactory clone() {
         try {
-            ConnectionFactory clone = (ConnectionFactory)super.clone();
+            ConnectionFactory clone = (ConnectionFactory) super.clone();
             return clone;
         } catch (CloneNotSupportedException e) {
             throw new RuntimeException(e);
@@ -1419,10 +1496,11 @@ public class ConnectionFactory implements Cloneable {
      * Keys must be prefixed with <code>rabbitmq.</code>,
      * use {@link ConnectionFactory#load(String, String)} to
      * specify your own prefix.
+     *
      * @param propertyFileLocation location of the property file to use
      * @throws IOException when something goes wrong reading the file
-     * @since 4.4.0
      * @see ConnectionFactoryConfigurator
+     * @since 4.4.0
      */
     public ConnectionFactory load(String propertyFileLocation) throws IOException {
         ConnectionFactoryConfigurator.load(this, propertyFileLocation);
@@ -1431,11 +1509,12 @@ public class ConnectionFactory implements Cloneable {
 
     /**
      * Load settings from a property file.
+     *
      * @param propertyFileLocation location of the property file to use
-     * @param prefix key prefix for the entries in the file
+     * @param prefix               key prefix for the entries in the file
      * @throws IOException when something goes wrong reading the file
-     * @since 4.4.0
      * @see ConnectionFactoryConfigurator
+     * @since 4.4.0
      */
     public ConnectionFactory load(String propertyFileLocation, String prefix) throws IOException {
         ConnectionFactoryConfigurator.load(this, propertyFileLocation, prefix);
@@ -1447,9 +1526,10 @@ public class ConnectionFactory implements Cloneable {
      * Keys must be prefixed with <code>rabbitmq.</code>,
      * use {@link ConnectionFactory#load(Properties, String)} to
      * specify your own prefix.
+     *
      * @param properties source for settings
-     * @since 4.4.0
      * @see ConnectionFactoryConfigurator
+     * @since 4.4.0
      */
     public ConnectionFactory load(Properties properties) {
         ConnectionFactoryConfigurator.load(this, properties);
@@ -1458,10 +1538,11 @@ public class ConnectionFactory implements Cloneable {
 
     /**
      * Load settings from a {@link Properties} instance.
+     *
      * @param properties source for settings
-     * @param prefix key prefix for properties entries
-     * @since 4.4.0
+     * @param prefix     key prefix for properties entries
      * @see ConnectionFactoryConfigurator
+     * @since 4.4.0
      */
     @SuppressWarnings("unchecked")
     public ConnectionFactory load(Properties properties, String prefix) {
@@ -1474,9 +1555,10 @@ public class ConnectionFactory implements Cloneable {
      * Keys must be prefixed with <code>rabbitmq.</code>,
      * use {@link ConnectionFactory#load(Map, String)} to
      * specify your own prefix.
+     *
      * @param properties source for settings
-     * @since 4.4.0
      * @see ConnectionFactoryConfigurator
+     * @since 4.4.0
      */
     public ConnectionFactory load(Map<String, String> properties) {
         ConnectionFactoryConfigurator.load(this, properties);
@@ -1485,10 +1567,11 @@ public class ConnectionFactory implements Cloneable {
 
     /**
      * Load settings from a {@link Map} instance.
+     *
      * @param properties source for settings
-     * @param prefix key prefix for map entries
-     * @since 4.4.0
+     * @param prefix     key prefix for map entries
      * @see ConnectionFactoryConfigurator
+     * @since 4.4.0
      */
     public ConnectionFactory load(Map<String, String> properties, String prefix) {
         ConnectionFactoryConfigurator.load(this, properties, prefix);
@@ -1497,6 +1580,7 @@ public class ConnectionFactory implements Cloneable {
 
     /**
      * Returns automatic connection recovery interval in milliseconds.
+     *
      * @return how long will automatic recovery wait before attempting to reconnect, in ms; default is 5000
      */
     public long getNetworkRecoveryInterval() {
@@ -1507,6 +1591,7 @@ public class ConnectionFactory implements Cloneable {
      * Sets connection recovery interval. Default is 5000.
      * Uses {@link com.rabbitmq.client.RecoveryDelayHandler.DefaultRecoveryDelayHandler} by default.
      * Use another {@link RecoveryDelayHandler} implementation for more flexibility.
+     *
      * @param networkRecoveryInterval how long will automatic recovery wait before attempting to reconnect, in ms
      * @see RecoveryDelayHandler
      */
@@ -1519,6 +1604,7 @@ public class ConnectionFactory implements Cloneable {
      * Sets connection recovery interval. Default is 5000.
      * Uses {@link com.rabbitmq.client.RecoveryDelayHandler.DefaultRecoveryDelayHandler} by default.
      * Use another {@link RecoveryDelayHandler} implementation for more flexibility.
+     *
      * @param networkRecoveryInterval how long will automatic recovery wait before attempting to reconnect, in ms
      * @see RecoveryDelayHandler
      */
@@ -1526,18 +1612,20 @@ public class ConnectionFactory implements Cloneable {
         this.networkRecoveryInterval = networkRecoveryInterval;
         return this;
     }
-    
+
     /**
      * Returns automatic connection recovery delay handler.
+     *
      * @return recovery delay handler. May be null if not set.
      * @since 4.3.0
      */
     public RecoveryDelayHandler getRecoveryDelayHandler() {
         return recoveryDelayHandler;
     }
-    
+
     /**
      * Sets the automatic connection recovery delay handler.
+     *
      * @param recoveryDelayHandler the recovery delay handler
      * @since 4.3.0
      */
@@ -1549,7 +1637,6 @@ public class ConnectionFactory implements Cloneable {
     /**
      * Sets the parameters when using NIO.
      *
-     *
      * @param nioParams
      * @see NioParams
      */
@@ -1560,6 +1647,7 @@ public class ConnectionFactory implements Cloneable {
 
     /**
      * Retrieve the parameters for NIO mode.
+     *
      * @return
      */
     public NioParams getNioParams() {
@@ -1570,10 +1658,10 @@ public class ConnectionFactory implements Cloneable {
      * Use non-blocking IO (NIO) for communication with the server.
      * With NIO, several connections created from the same {@link ConnectionFactory}
      * can use the same IO thread.
-     *
+     * <p>
      * A client process using a lot of not-so-active connections can benefit
      * from NIO, as it would use fewer threads than with the traditional, blocking IO mode.
-     *
+     * <p>
      * Use {@link NioParams} to tune NIO and a {@link SocketChannelConfigurator} to
      * configure the underlying {@link java.nio.channels.SocketChannel}s for connections.
      *
@@ -1600,10 +1688,11 @@ public class ConnectionFactory implements Cloneable {
     /**
      * Set the continuation timeout for RPC calls in channels.
      * Default is 10 minutes. 0 means no timeout.
+     *
      * @param channelRpcTimeout
      */
     public ConnectionFactory setChannelRpcTimeout(int channelRpcTimeout) {
-        if(channelRpcTimeout < 0) {
+        if (channelRpcTimeout < 0) {
             throw new IllegalArgumentException("Timeout cannot be less than 0");
         }
         this.channelRpcTimeout = channelRpcTimeout;
@@ -1612,6 +1701,7 @@ public class ConnectionFactory implements Cloneable {
 
     /**
      * Get the timeout for RPC calls in channels.
+     *
      * @return
      */
     public int getChannelRpcTimeout() {
@@ -1628,7 +1718,7 @@ public class ConnectionFactory implements Cloneable {
     public void setMaxInboundMessageBodySize(int maxInboundMessageBodySize) {
         if (maxInboundMessageBodySize <= 0) {
             throw new IllegalArgumentException("Max inbound message body size must be greater than 0: "
-                + maxInboundMessageBodySize);
+                    + maxInboundMessageBodySize);
         }
         this.maxInboundMessageBodySize = maxInboundMessageBodySize;
     }
@@ -1641,6 +1731,7 @@ public class ConnectionFactory implements Cloneable {
      * (which is the case with the {@link #useSslProtocol()} methods).
      * This way, different connections with a different certificate
      * for each of them is a possible scenario.
+     *
      * @param sslContextFactory
      * @see #useSslProtocol(SSLContext)
      * @since 5.0.0
@@ -1655,6 +1746,7 @@ public class ConnectionFactory implements Cloneable {
      * expects a queue.declare-ok response) of RPC calls
      * and ignore those that do not match.
      * Default is false.
+     *
      * @param channelShouldCheckRpcResponseType
      */
     public ConnectionFactory setChannelShouldCheckRpcResponseType(boolean channelShouldCheckRpcResponseType) {
@@ -1739,7 +1831,7 @@ public class ConnectionFactory implements Cloneable {
 
     /**
      * Set the recovered queue name supplier. Default is use the same queue name when recovering queues.
-     * 
+     *
      * @param recoveredQueueNameSupplier queue name supplier
      */
     public ConnectionFactory setRecoveredQueueNameSupplier(RecoveredQueueNameSupplier recoveredQueueNameSupplier) {
