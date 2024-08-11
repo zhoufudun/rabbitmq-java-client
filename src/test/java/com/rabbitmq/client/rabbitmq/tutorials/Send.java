@@ -12,12 +12,17 @@ public class Send {
 
     public static void main(String[] argv) throws Exception {
         ConnectionFactory factory = new ConnectionFactory();
+        factory.setVirtualHost("/zfdtest");
+        factory.setUsername("guest");
+        factory.setPassword("guest");
         factory.setHost("localhost");
-        try (Connection connection = factory.newConnection(); Channel channel = connection.createChannel()) {
-            channel.queueDeclare(QUEUE_NAME, false, false, false, null);
-            String message = "Hello World!";
-            channel.basicPublish("", QUEUE_NAME, null, message.getBytes(StandardCharsets.UTF_8));
-            System.out.println(" [x] Sent '" + message + "'");
+        try (Connection connection = factory.newConnection()) {
+            try (Channel channel = connection.createChannel()) {
+                channel.queueDeclare(QUEUE_NAME, false, false, false, null);
+                String message = "Hello World!";
+                channel.basicPublish("", QUEUE_NAME, null, message.getBytes(StandardCharsets.UTF_8));
+                System.out.println(" [x] Sent '" + message + "'");
+            }
         }
     }
 }

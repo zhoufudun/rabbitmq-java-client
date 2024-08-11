@@ -44,9 +44,11 @@ import java.util.function.Predicate;
  * Connection implementation that performs automatic recovery when
  * connection shutdown is not initiated by the application (e.g. due to
  * an I/O exception).
- *
+ * <p>
  * Topology (exchanges, queues, bindings, and consumers) can be (and by default is) recovered
  * as well, in this order:
+ * <p>
+ * 当应用程序未启动连接关闭时（例如，由于I/O异常），执行自动恢复的连接实现。拓扑（交换、队列、绑定和消费者）也可以（默认情况下是）按以下顺序恢复：
  *
  * <ol>
  *  <li>Exchanges</li>
@@ -64,7 +66,7 @@ import java.util.function.Predicate;
 public class AutorecoveringConnection implements RecoverableConnection, NetworkConnection {
 
     public static final Predicate<ShutdownSignalException> DEFAULT_CONNECTION_RECOVERY_TRIGGERING_CONDITION =
-        cause -> !cause.isInitiatedByApplication() || (cause.getCause() instanceof MissedHeartbeatException);
+            cause -> !cause.isInitiatedByApplication() || (cause.getCause() instanceof MissedHeartbeatException);
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AutorecoveringConnection.class);
 
@@ -73,7 +75,7 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
     private final ConnectionParams params;
     private volatile RecoveryAwareAMQConnection delegate;
 
-    private final List<ShutdownListener> shutdownHooks  = Collections.synchronizedList(new ArrayList<>());
+    private final List<ShutdownListener> shutdownHooks = Collections.synchronizedList(new ArrayList<>());
     private final List<RecoveryListener> recoveryListeners = Collections.synchronizedList(new ArrayList<>());
     private final List<BlockedListener> blockedListeners = Collections.synchronizedList(new ArrayList<>());
 
@@ -86,18 +88,18 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
     private final List<QueueRecoveryListener> queueRecoveryListeners = Collections.synchronizedList(new ArrayList<>());
 
     private final TopologyRecoveryFilter topologyRecoveryFilter;
-	
-	// Used to block connection recovery attempts after close() is invoked.
-	private volatile boolean manuallyClosed = false;
-	
-	// This lock guards the manuallyClosed flag and the delegate connection.  Guarding these two ensures that a new connection can never
-	// be created after application code has initiated shutdown.  
-	private final Object recoveryLock = new Object();
 
-	private final Predicate<ShutdownSignalException> connectionRecoveryTriggeringCondition;
+    // Used to block connection recovery attempts after close() is invoked.
+    private volatile boolean manuallyClosed = false;
 
-	private final RetryHandler retryHandler;
-	private final RecoveredQueueNameSupplier recoveredQueueNameSupplier;
+    // This lock guards the manuallyClosed flag and the delegate connection.  Guarding these two ensures that a new connection can never
+    // be created after application code has initiated shutdown.
+    private final Object recoveryLock = new Object();
+
+    private final Predicate<ShutdownSignalException> connectionRecoveryTriggeringCondition;
+
+    private final RetryHandler retryHandler;
+    private final RecoveredQueueNameSupplier recoveredQueueNameSupplier;
 
     public AutorecoveringConnection(ConnectionParams params, FrameHandlerFactory f, List<Address> addrs) {
         this(params, f, new ListAddressResolver(addrs));
@@ -109,20 +111,18 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
 
     public AutorecoveringConnection(ConnectionParams params, FrameHandlerFactory f, AddressResolver addressResolver,
                                     MetricsCollector metricsCollector, ObservationCollector observationCollector) {
-        this.cf = new RecoveryAwareAMQConnectionFactory(
-            params, f, addressResolver,
-            metricsCollector, observationCollector
-        );
+
+        this.cf = new RecoveryAwareAMQConnectionFactory(params, f, addressResolver, metricsCollector, observationCollector);
         this.params = params;
 
         this.connectionRecoveryTriggeringCondition = params.getConnectionRecoveryTriggeringCondition() == null ?
-            DEFAULT_CONNECTION_RECOVERY_TRIGGERING_CONDITION : params.getConnectionRecoveryTriggeringCondition();
+                DEFAULT_CONNECTION_RECOVERY_TRIGGERING_CONDITION : params.getConnectionRecoveryTriggeringCondition();
 
         setupErrorOnWriteListenerForPotentialRecovery();
 
         this.channels = new ConcurrentHashMap<>();
         this.topologyRecoveryFilter = params.getTopologyRecoveryFilter() == null ?
-            letAllPassFilter() : params.getTopologyRecoveryFilter();
+                letAllPassFilter() : params.getTopologyRecoveryFilter();
 
         this.retryHandler = params.getTopologyRecoveryRetryHandler();
         this.recoveredQueueNameSupplier = params.getRecoveredQueueNameSupplier() == null ?
@@ -152,11 +152,13 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
     }
 
     private static TopologyRecoveryFilter letAllPassFilter() {
-        return new TopologyRecoveryFilter() {};
+        return new TopologyRecoveryFilter() {
+        };
     }
 
     /**
      * Private API.
+     *
      * @throws IOException
      * @see com.rabbitmq.client.ConnectionFactory#newConnection(java.util.concurrent.ExecutorService)
      */
@@ -282,9 +284,9 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
      */
     @Override
     public void close() throws IOException {
-		synchronized(recoveryLock) {
-			this.manuallyClosed = true;
-		}
+        synchronized (recoveryLock) {
+            this.manuallyClosed = true;
+        }
         delegate.close();
     }
 
@@ -293,9 +295,9 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
      */
     @Override
     public void close(int timeout) throws IOException {
-		synchronized(recoveryLock) {
-			this.manuallyClosed = true;
-		}
+        synchronized (recoveryLock) {
+            this.manuallyClosed = true;
+        }
         delegate.close(timeout);
     }
 
@@ -304,9 +306,9 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
      */
     @Override
     public void close(int closeCode, String closeMessage, int timeout) throws IOException {
-		synchronized(recoveryLock) {
-			this.manuallyClosed = true;
-		}
+        synchronized (recoveryLock) {
+            this.manuallyClosed = true;
+        }
         delegate.close(closeCode, closeMessage, timeout);
     }
 
@@ -315,9 +317,9 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
      */
     @Override
     public void abort() {
-		synchronized(recoveryLock) {
-			this.manuallyClosed = true;
-		}
+        synchronized (recoveryLock) {
+            this.manuallyClosed = true;
+        }
         delegate.abort();
     }
 
@@ -326,9 +328,9 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
      */
     @Override
     public void abort(int closeCode, String closeMessage, int timeout) {
-		synchronized(recoveryLock) {
-			this.manuallyClosed = true;
-		}
+        synchronized (recoveryLock) {
+            this.manuallyClosed = true;
+        }
         delegate.abort(closeCode, closeMessage, timeout);
     }
 
@@ -337,9 +339,9 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
      */
     @Override
     public void abort(int closeCode, String closeMessage) {
-		synchronized(recoveryLock) {
-			this.manuallyClosed = true;
-		}
+        synchronized (recoveryLock) {
+            this.manuallyClosed = true;
+        }
         delegate.abort(closeCode, closeMessage);
     }
 
@@ -348,15 +350,15 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
      */
     @Override
     public void abort(int timeout) {
-		synchronized(recoveryLock) {
-			this.manuallyClosed = true;
-		}
+        synchronized (recoveryLock) {
+            this.manuallyClosed = true;
+        }
         delegate.abort(timeout);
     }
 
     /**
-    * Not supposed to be used outside of automated tests.
-    */
+     * Not supposed to be used outside of automated tests.
+     */
     public AMQConnection getDelegate() {
         return delegate;
     }
@@ -419,10 +421,10 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
      */
     @Override
     public void close(int closeCode, String closeMessage) throws IOException {
-		synchronized(recoveryLock) {
-			this.manuallyClosed = true;
-		}
-		delegate.close(closeCode, closeMessage);
+        synchronized (recoveryLock) {
+            this.manuallyClosed = true;
+        }
+        delegate.close(closeCode, closeMessage);
     }
 
     /**
@@ -453,6 +455,7 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
 
     /**
      * Adds the recovery listener
+     *
      * @param listener {@link com.rabbitmq.client.RecoveryListener} to execute after this connection recovers from network failure
      */
     @Override
@@ -462,6 +465,7 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
 
     /**
      * Removes the recovery listener
+     *
      * @param listener {@link com.rabbitmq.client.RecoveryListener} to remove
      */
     @Override
@@ -547,8 +551,8 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
     }
 
     /**
-     * @see com.rabbitmq.client.impl.recovery.AutorecoveringConnection#addQueueRecoveryListener
      * @param listener listener to be removed
+     * @see com.rabbitmq.client.impl.recovery.AutorecoveringConnection#addQueueRecoveryListener
      */
     public void removeQueueRecoveryListener(QueueRecoveryListener listener) {
         this.queueRecoveryListeners.remove(listener);
@@ -566,20 +570,20 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
     }
 
     /**
-     * @see com.rabbitmq.client.impl.recovery.AutorecoveringConnection#addConsumerRecoveryListener(ConsumerRecoveryListener)
      * @param listener listener to be removed
+     * @see com.rabbitmq.client.impl.recovery.AutorecoveringConnection#addConsumerRecoveryListener(ConsumerRecoveryListener)
      */
     public void removeConsumerRecoveryListener(ConsumerRecoveryListener listener) {
         this.consumerRecoveryListeners.remove(listener);
     }
-    
+
     RecoveredQueueNameSupplier getRecoveredQueueNameSupplier() {
         return this.recoveredQueueNameSupplier;
     }
 
     private synchronized void beginAutomaticRecovery() throws InterruptedException {
         final long delay = this.params.getRecoveryDelayHandler().getDelay(0);
-        if (delay > 0)  {
+        if (delay > 0) {
             this.wait(delay);
         }
 
@@ -591,16 +595,16 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
         }
         LOGGER.debug("Connection {} has recovered", newConn);
         this.addAutomaticRecoveryListener(newConn);
-	    this.recoverShutdownListeners(newConn);
-	    this.recoverBlockedListeners(newConn);
-	    this.recoverChannels(newConn);
-	    // don't assign new delegate connection until channel recovery is complete
-	    this.delegate = newConn;
-	    if (this.params.isTopologyRecoveryEnabled()) {
-	        notifyTopologyRecoveryListenersStarted();
-	        recoverTopology(params.getTopologyRecoveryExecutor());
-	    }
-		this.notifyRecoveryListenersComplete();
+        this.recoverShutdownListeners(newConn);
+        this.recoverBlockedListeners(newConn);
+        this.recoverChannels(newConn);
+        // don't assign new delegate connection until channel recovery is complete
+        this.delegate = newConn;
+        if (this.params.isTopologyRecoveryEnabled()) {
+            notifyTopologyRecoveryListenersStarted();
+            recoverTopology(params.getTopologyRecoveryExecutor());
+        }
+        this.notifyRecoveryListenersComplete();
     }
 
     private void recoverShutdownListeners(final RecoveryAwareAMQConnection newConn) {
@@ -615,8 +619,8 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
         }
     }
 
-	// Returns new connection if the connection was recovered, 
-	// null if application initiated shutdown while attempting recovery.  
+    // Returns new connection if the connection was recovered,
+    // null if application initiated shutdown while attempting recovery.
     private RecoveryAwareAMQConnection recoverConnection() throws InterruptedException {
         int attempts = 0;
         while (!manuallyClosed) {
@@ -624,25 +628,25 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
                 attempts++;
                 // No Sonar: no need to close this resource because we're the one that creates it
                 // and hands it over to the user
-				RecoveryAwareAMQConnection newConn = this.cf.newConnection(); //NOSONAR
-				synchronized(recoveryLock) {
-					if (!manuallyClosed) {
-						// This is the standard case.				
-						return newConn;
-					}
-				}
-				// This is the once in a blue moon case.  
-				// Application code just called close as the connection
-				// was being re-established.  So we attempt to close the newly created connection.
-				newConn.abort();
-				return null;
+                RecoveryAwareAMQConnection newConn = this.cf.newConnection(); //NOSONAR
+                synchronized (recoveryLock) {
+                    if (!manuallyClosed) {
+                        // This is the standard case.
+                        return newConn;
+                    }
+                }
+                // This is the once in a blue moon case.
+                // Application code just called close as the connection
+                // was being re-established.  So we attempt to close the newly created connection.
+                newConn.abort();
+                return null;
             } catch (Exception e) {
                 Thread.sleep(this.params.getRecoveryDelayHandler().getDelay(attempts));
                 this.getExceptionHandler().handleConnectionRecoveryException(this, e);
             }
         }
-		
-		return null;
+
+        return null;
     }
 
     private void recoverChannels(final RecoveryAwareAMQConnection newConn) {
@@ -671,16 +675,17 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
             f.handleRecoveryStarted(this);
         }
     }
-    
+
     private void notifyTopologyRecoveryListenersStarted() {
         for (RecoveryListener f : Utility.copy(this.recoveryListeners)) {
             f.handleTopologyRecoveryStarted(this);
         }
     }
-    
+
     /**
      * Recover a closed channel and all topology (i.e. RecordedEntities) associated to it.
      * Any errors will be sent to the {@link #getExceptionHandler()}.
+     *
      * @param channel channel to recover
      * @throws IllegalArgumentException if this channel is not owned by this connection
      */
@@ -693,23 +698,23 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
             recoverChannel(channel);
             LOGGER.debug("Recovered channel={}. Now recovering its topology", channel);
             Utility.copy(recordedExchanges).values().stream()
-                .filter(e -> e.getChannel() == channel)
-                .forEach(e -> recoverExchange(e, false));
+                    .filter(e -> e.getChannel() == channel)
+                    .forEach(e -> recoverExchange(e, false));
             Utility.copy(recordedQueues).values().stream()
-                .filter(q -> q.getChannel() == channel)
-                .forEach(q -> recoverQueue(q.getName(), q, false));
+                    .filter(q -> q.getChannel() == channel)
+                    .forEach(q -> recoverQueue(q.getName(), q, false));
             Utility.copy(recordedBindings).stream()
-                .filter(b -> b.getChannel() == channel)
-                .forEach(b -> recoverBinding(b, false));
+                    .filter(b -> b.getChannel() == channel)
+                    .forEach(b -> recoverBinding(b, false));
             Utility.copy(consumers).values().stream()
-                .filter(c -> c.getChannel() == channel)
-                .forEach(c -> recoverConsumer(c.getConsumerTag(), c, false));
+                    .filter(c -> c.getChannel() == channel)
+                    .forEach(c -> recoverConsumer(c.getConsumerTag(), c, false));
             LOGGER.debug("Recovered topology for channel={}", channel);
         } catch (Exception e) {
             getExceptionHandler().handleChannelRecoveryException(channel, e);
         }
     }
-    
+
     private void recoverTopology(final ExecutorService executor) {
         // The recovery sequence is the following:
         // 1. Recover exchanges
@@ -773,31 +778,33 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
 
     /**
      * Recover the queue. Any exceptions during recovery will be delivered to the connection's {@link ExceptionHandler}.
+     *
      * @param oldName queue name
-     * @param q recorded queue
-     * @param retry whether to retry the recovery if an error occurs and a RetryHandler was configured on the connection
+     * @param q       recorded queue
+     * @param retry   whether to retry the recovery if an error occurs and a RetryHandler was configured on the connection
      */
     public void recoverQueue(final String oldName, RecordedQueue q, boolean retry) {
         try {
             internalRecoverQueue(oldName, q, retry);
         } catch (Exception cause) {
             final String message = "Caught an exception while recovering queue " + oldName +
-                                           ": " + cause.getMessage();
+                    ": " + cause.getMessage();
             TopologyRecoveryException e = new TopologyRecoveryException(message, cause, q);
             this.getExceptionHandler().handleTopologyRecoveryException(delegate, q.getDelegateChannel(), e);
         }
     }
-    
+
     /**
      * Recover the queue. Errors are not retried and not delivered to the connection's {@link ExceptionHandler}
+     *
      * @param oldName queue name
-     * @param q recorded queue
+     * @param q       recorded queue
      * @throws Exception if an error occurs recovering the queue
      */
     void recoverQueue(final String oldName, RecordedQueue q) throws Exception {
         internalRecoverQueue(oldName, q, false);
     }
-    
+
     private void internalRecoverQueue(final String oldName, RecordedQueue q, boolean retry) throws Exception {
         if (topologyRecoveryFilter.filterQueue(q)) {
             LOGGER.debug("Recovering {}", q);
@@ -846,7 +853,7 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
             }
         } catch (Exception cause) {
             String message = "Caught an exception while recovering binding between " + b.getSource() +
-                                     " and " + b.getDestination() + ": " + cause.getMessage();
+                    " and " + b.getDestination() + ": " + cause.getMessage();
             TopologyRecoveryException e = new TopologyRecoveryException(message, cause, b);
             this.getExceptionHandler().handleTopologyRecoveryException(delegate, b.getDelegateChannel(), e);
         }
@@ -854,9 +861,10 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
 
     /**
      * Recover the consumer. Any exceptions during recovery will be delivered to the connection's {@link ExceptionHandler}.
-     * @param tag consumer tag
+     *
+     * @param tag      consumer tag
      * @param consumer recorded consumer
-     * @param retry whether to retry the recovery if an error occurs and a RetryHandler was configured on the connection
+     * @param retry    whether to retry the recovery if an error occurs and a RetryHandler was configured on the connection
      */
     public void recoverConsumer(final String tag, RecordedConsumer consumer, boolean retry) {
         try {
@@ -868,17 +876,18 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
             this.getExceptionHandler().handleTopologyRecoveryException(delegate, consumer.getDelegateChannel(), e);
         }
     }
-    
+
     /**
      * Recover the consumer. Errors are not retried and not delivered to the connection's {@link ExceptionHandler}
-     * @param tag consumer tag
+     *
+     * @param tag      consumer tag
      * @param consumer recorded consumer
      * @throws Exception if an error occurs recovering the consumer
      */
     void recoverConsumer(final String tag, RecordedConsumer consumer) throws Exception {
         internalRecoverConsumer(tag, consumer, false);
     }
-    
+
     private void internalRecoverConsumer(final String tag, RecordedConsumer consumer, boolean retry) throws Exception {
         if (this.topologyRecoveryFilter.filterConsumer(consumer)) {
             LOGGER.debug("Recovering {}", consumer);
@@ -893,7 +902,7 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
             }
 
             // make sure server-generated tags are re-added. MK.
-            if(tag != null && !tag.equals(newTag)) {
+            if (tag != null && !tag.equals(newTag)) {
                 synchronized (this.consumers) {
                     this.consumers.remove(tag);
                     this.consumers.put(newTag, consumer);
@@ -980,7 +989,7 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
             callables.add(Executors.callable(() -> {
                 for (final E entity : entityList) {
                     if (entity instanceof RecordedExchange) {
-                        recoverExchange((RecordedExchange)entity, true);
+                        recoverExchange((RecordedExchange) entity, true);
                     } else if (entity instanceof RecordedQueue) {
                         final RecordedQueue q = (RecordedQueue) entity;
                         recoverQueue(q.getName(), q, true);
@@ -997,56 +1006,56 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
     }
 
     void recordQueueBinding(AutorecoveringChannel ch,
-                                                String queue,
-                                                String exchange,
-                                                String routingKey,
-                                                Map<String, Object> arguments) {
+                            String queue,
+                            String exchange,
+                            String routingKey,
+                            Map<String, Object> arguments) {
         RecordedBinding binding = new RecordedQueueBinding(ch).
-                                         source(exchange).
-                                         destination(queue).
-                                         routingKey(routingKey).
-                                         arguments(arguments);
+                source(exchange).
+                destination(queue).
+                routingKey(routingKey).
+                arguments(arguments);
         this.recordedBindings.remove(binding);
         this.recordedBindings.add(binding);
     }
 
     boolean deleteRecordedQueueBinding(AutorecoveringChannel ch,
-                                                           String queue,
-                                                           String exchange,
-                                                           String routingKey,
-                                                           Map<String, Object> arguments) {
+                                       String queue,
+                                       String exchange,
+                                       String routingKey,
+                                       Map<String, Object> arguments) {
         RecordedBinding b = new RecordedQueueBinding(ch).
-                                   source(exchange).
-                                   destination(queue).
-                                   routingKey(routingKey).
-                                   arguments(arguments);
+                source(exchange).
+                destination(queue).
+                routingKey(routingKey).
+                arguments(arguments);
         return this.recordedBindings.remove(b);
     }
 
     void recordExchangeBinding(AutorecoveringChannel ch,
-                                                   String destination,
-                                                   String source,
-                                                   String routingKey,
-                                                   Map<String, Object> arguments) {
+                               String destination,
+                               String source,
+                               String routingKey,
+                               Map<String, Object> arguments) {
         RecordedBinding binding = new RecordedExchangeBinding(ch).
-                                          source(source).
-                                          destination(destination).
-                                          routingKey(routingKey).
-                                          arguments(arguments);
+                source(source).
+                destination(destination).
+                routingKey(routingKey).
+                arguments(arguments);
         this.recordedBindings.remove(binding);
         this.recordedBindings.add(binding);
     }
 
     boolean deleteRecordedExchangeBinding(AutorecoveringChannel ch,
-                                                              String destination,
-                                                              String source,
-                                                              String routingKey,
-                                                              Map<String, Object> arguments) {
+                                          String destination,
+                                          String source,
+                                          String routingKey,
+                                          Map<String, Object> arguments) {
         RecordedBinding b = new RecordedExchangeBinding(ch).
-                                    source(source).
-                                    destination(destination).
-                                    routingKey(routingKey).
-                                    arguments(arguments);
+                source(source).
+                destination(destination).
+                routingKey(routingKey).
+                arguments(arguments);
         return this.recordedBindings.remove(b);
     }
 
@@ -1065,12 +1074,12 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
             this.maybeDeleteRecordedAutoDeleteExchange(b.getSource());
         }
     }
-    
+
     /**
      * Exclude the queue from the list of queues to recover after connection failure.
      * Intended to be used in usecases where you want to remove the queue from this connection's recovery list but don't want to delete the queue from the server.
-     * 
-     * @param queue queue name to exclude from recorded recovery queues
+     *
+     * @param queue    queue name to exclude from recorded recovery queues
      * @param ifUnused if true, the RecordedQueue will only be excluded if no local consumers are using it.
      */
     public void excludeQueueFromRecovery(final String queue, final boolean ifUnused) {
@@ -1111,11 +1120,11 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
     void maybeDeleteRecordedAutoDeleteQueue(String queue) {
         synchronized (this.consumers) {
             synchronized (this.recordedQueues) {
-                if(!hasMoreConsumersOnQueue(this.consumers.values(), queue)) {
+                if (!hasMoreConsumersOnQueue(this.consumers.values(), queue)) {
                     RecordedQueue q = this.recordedQueues.get(queue);
                     // last consumer on this connection is gone, remove recorded queue
                     // if it is auto-deleted. See bug 26364.
-                    if(q != null && q.isAutoDelete()) {
+                    if (q != null && q.isAutoDelete()) {
                         deleteRecordedQueue(queue);
                     }
                 }
@@ -1125,11 +1134,11 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
 
     void maybeDeleteRecordedAutoDeleteExchange(String exchange) {
         synchronized (this.recordedExchanges) {
-            if(!hasMoreDestinationsBoundToExchange(Utility.copy(this.recordedBindings), exchange)) {
+            if (!hasMoreDestinationsBoundToExchange(Utility.copy(this.recordedBindings), exchange)) {
                 RecordedExchange x = this.recordedExchanges.get(exchange);
                 // last binding where this exchange is the source is gone, remove recorded exchange
                 // if it is auto-deleted. See bug 26364.
-                if(x != null && x.isAutoDelete()) {
+                if (x != null && x.isAutoDelete()) {
                     deleteRecordedExchange(exchange);
                 }
             }
@@ -1139,7 +1148,7 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
     boolean hasMoreDestinationsBoundToExchange(List<RecordedBinding> bindings, String exchange) {
         boolean result = false;
         for (RecordedBinding b : bindings) {
-            if(exchange.equals(b.getSource())) {
+            if (exchange.equals(b.getSource())) {
                 result = true;
                 break;
             }
@@ -1150,7 +1159,7 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
     boolean hasMoreConsumersOnQueue(Collection<RecordedConsumer> consumers, String queue) {
         boolean result = false;
         for (RecordedConsumer c : consumers) {
-            if(queue.equals(c.getQueue())) {
+            if (queue.equals(c.getQueue())) {
                 result = true;
                 break;
             }
@@ -1163,7 +1172,7 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
         synchronized (this.recordedBindings) {
             for (Iterator<RecordedBinding> it = this.recordedBindings.iterator(); it.hasNext(); ) {
                 RecordedBinding b = it.next();
-                if(b.getDestination().equals(s)) {
+                if (b.getDestination().equals(s)) {
                     it.remove();
                     result.add(b);
                 }
@@ -1183,7 +1192,7 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
     public List<RecordedBinding> getRecordedBindings() {
         return recordedBindings;
     }
-    
+
     public Map<String, RecordedConsumer> getRecordedConsumers() {
         return consumers;
     }
@@ -1193,13 +1202,17 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
         return this.delegate.toString();
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public String getId() {
         return this.delegate.getId();
     }
 
-    /** Public API - {@inheritDoc} */
+    /**
+     * Public API - {@inheritDoc}
+     */
     @Override
     public void setId(String id) {
         this.delegate.setId(id);

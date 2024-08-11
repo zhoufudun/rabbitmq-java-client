@@ -76,6 +76,7 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
     private AMQCommand _command;
 
     /**
+     * 当前未完成的 RPC 请求（如果有的话）。未来可能会发展为一个队列
      * The current outstanding RPC request, if any. (Could become a queue in future.)
      */
     private RpcWrapper _activeRpc = null;
@@ -229,7 +230,7 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
         }
     }
 
-    public void enqueueRpc(RpcContinuation k) {
+    public void enqueueRpc(RpcContinuation k) { // SimpleBlockingRpcContinuation
         doEnqueueRpc(() -> new RpcContinuationRpcWrapper(k));
     }
 
@@ -252,7 +253,7 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
             if (waitClearedInterruptStatus) {
                 Thread.currentThread().interrupt();
             }
-            _activeRpc = rpcWrapperSupplier.get();
+            _activeRpc = rpcWrapperSupplier.get(); // RpcContinuationRpcWrapper
         } finally {
             _channelLock.unlock();
         }
@@ -555,8 +556,7 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
             return _blocker.uninterruptibleGetValue();
         }
 
-        T getReply(int timeout)
-                throws ShutdownSignalException, TimeoutException {
+        T getReply(int timeout) throws ShutdownSignalException, TimeoutException {
             return _blocker.uninterruptibleGetValue(timeout);
         }
 

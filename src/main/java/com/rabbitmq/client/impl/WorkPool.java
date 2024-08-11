@@ -51,6 +51,19 @@ import java.util.function.BiConsumer;
  * This implementation is thread-safe.
  * @param <K> Key -- type of client
  * @param <W> Work -- type of work item
+ *
+ *
+ * 这是2010年11月《渠道工作》（channels.pdf）中渠道规范的通用实现。必须使用registerKey（K）注册K类型的对象，
+ * 然后它们成为客户端，并为每个客户端存储一个项目队列（W类型）。
+ * 每个客户端都有一个状态，该状态恰好是休眠、进行中或就绪状态之一。
+ * 注册后，客户立即处于休眠状态。可以使用addWorkItem（Object，Object）将项目（单独）添加到客户端的队列（末尾）。
+ * 如果客户端处于休眠状态，它就会准备就绪。所有其他州保持不变。
+ * 下一个就绪的客户端及其项的集合可以使用nextWorkBlock（collection，max）检索（使该客户端正在进行中）。
+ * 正在进行的客户端可以使用finishWorkBlock（K）完成（处理一批项目）。然后，它要么处于休眠状态，要么处于就绪状态，
+ * 这取决于它的工作项队列是空的还是否。如果客户端有排队的项目，它要么正在进行中，要么已经就绪，但不能两者兼而有之。
+ * 工作完成后，如果有进一步的工作，它可能会被标记为准备就绪，如果没有，则标记为休眠。
+ * 对于一个不活跃的客户来说，从来没有任何工作。客户端可以使用unregisterKey（K）进行注销，
+ * 这会将客户端从状态的所有部分以及与之存储的任何项目队列中删除。所有客户端都可以使用unregistrAllKey（）进行注销。
  */
 public class WorkPool<K, W> {
     private static final int MAX_QUEUE_LENGTH = 1000;

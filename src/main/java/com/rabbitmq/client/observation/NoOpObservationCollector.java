@@ -18,28 +18,29 @@ package com.rabbitmq.client.observation;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Consumer;
 import com.rabbitmq.client.GetResponse;
+
 import java.io.IOException;
 
 final class NoOpObservationCollector implements ObservationCollector {
 
-  @Override
-  public void publish(
-      PublishCall call,
-      AMQP.Basic.Publish publish,
-      AMQP.BasicProperties properties,
-      byte[] body,
-      ConnectionInfo connectionInfo)
-      throws IOException {
-    call.publish(properties);
-  }
+    @Override
+    public void publish(
+            PublishCall call,
+            AMQP.Basic.Publish publish,
+            AMQP.BasicProperties properties,
+            byte[] body,
+            ConnectionInfo connectionInfo)
+            throws IOException {
+        call.publish(properties);
+    }
 
-  @Override
-  public Consumer basicConsume(String queue, String consumerTag, Consumer consumer) {
-    return consumer;
-  }
+    @Override
+    public Consumer basicConsume(String queue, String consumerTag, Consumer consumer) {
+        return consumer;
+    }
 
-  @Override
-  public GetResponse basicGet(BasicGetCall call, String queue) {
-    return call.get();
-  }
+    @Override
+    public GetResponse basicGet(BasicGetCall call, String queue) {
+        return call.get();
+    }
 }

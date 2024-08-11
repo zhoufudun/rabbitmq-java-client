@@ -39,7 +39,7 @@ public class SocketFrameHandlerFactory extends AbstractFrameHandlerFactory {
     public SocketFrameHandlerFactory(int connectionTimeout, SocketFactory socketFactory, SocketConfigurator configurator,
                                      boolean ssl, ExecutorService shutdownExecutor) {
         this(connectionTimeout, socketFactory, configurator, ssl, shutdownExecutor, null,
-             Integer.MAX_VALUE);
+                Integer.MAX_VALUE);
     }
 
     public SocketFrameHandlerFactory(int connectionTimeout, SocketFactory socketFactory, SocketConfigurator configurator,
@@ -79,13 +79,14 @@ public class SocketFrameHandlerFactory extends AbstractFrameHandlerFactory {
         }
     }
 
-    public FrameHandler create(Socket sock) throws IOException
-    {
+    public FrameHandler create(Socket sock) throws IOException {
         return new SocketFrameHandler(sock, this.shutdownExecutor, this.maxInboundMessageBodySize);
     }
 
     private static void quietTrySocketClose(Socket socket) {
         if (socket != null)
-            try { socket.close(); } catch (Exception _e) {/*ignore exceptions*/}
+            try {
+                socket.close();
+            } catch (Exception _e) {/*ignore exceptions*/}
     }
 }

@@ -40,7 +40,9 @@ public class SocketFrameHandler implements FrameHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SocketFrameHandler.class);
 
-    /** The underlying socket */
+    /**
+     * The underlying socket
+     */
     private final Socket _socket;
 
     /**
@@ -48,17 +50,23 @@ public class SocketFrameHandler implements FrameHandler {
      */
     private final ExecutorService _shutdownExecutor;
 
-    /** Socket's inputstream - data from the broker - synchronized on */
+    /**
+     * Socket's inputstream - data from the broker - synchronized on
+     */
     private final DataInputStream _inputStream;
     private final Lock _inputStreamLock = new ReentrantLock();
 
-    /** Socket's outputstream - data to the broker - synchronized on */
+    /**
+     * Socket's outputstream - data to the broker - synchronized on
+     */
     private final DataOutputStream _outputStream;
     private final Lock _outputStreamLock = new ReentrantLock();
 
     private final int maxInboundMessageBodySize;
 
-    /** Time to linger before closing the socket forcefully. */
+    /**
+     * Time to linger before closing the socket forcefully.
+     */
     public static final int SOCKET_CLOSING_TIMEOUT = 1;
 
     /**
@@ -107,16 +115,14 @@ public class SocketFrameHandler implements FrameHandler {
     }
 
     @Override
-    public void setTimeout(int timeoutMs)
-        throws SocketException
-    {
+    public void setTimeout(int timeoutMs) // 10s
+            throws SocketException {
         _socket.setSoTimeout(timeoutMs);
     }
 
     @Override
     public int getTimeout()
-        throws SocketException
-    {
+            throws SocketException {
         return _socket.getSoTimeout();
     }
 
@@ -149,18 +155,19 @@ public class SocketFrameHandler implements FrameHandler {
         }
     }
 
-   /**
+    /**
      * Write a 0-9-1-style connection header to the underlying socket,
      * containing the specified version information, kickstarting the
      * AMQP protocol version negotiation process.
+     * 将一个符合 0-9-1 风格的连接头写入底层套接字中，其中包含指定的版本信息，以启动 AMQP 协议版本协商过程。
      *
-     * @param major major protocol version number
-     * @param minor minor protocol version number
+     * @param major    major protocol version number
+     * @param minor    minor protocol version number
      * @param revision protocol revision number
      * @throws IOException if there is a problem accessing the connection
      * @see #sendHeader()
      */
-  public void sendHeader(int major, int minor, int revision) throws IOException {
+    public void sendHeader(int major, int minor, int revision) throws IOException {
         _outputStreamLock.lock();
         try {
             _outputStream.write("AMQP".getBytes("US-ASCII"));
@@ -181,7 +188,7 @@ public class SocketFrameHandler implements FrameHandler {
 
     @Override
     public void sendHeader() throws IOException {
-        sendHeader(AMQP.PROTOCOL.MAJOR, AMQP.PROTOCOL.MINOR, AMQP.PROTOCOL.REVISION);
+        sendHeader(AMQP.PROTOCOL.MAJOR, AMQP.PROTOCOL.MINOR, AMQP.PROTOCOL.REVISION); // 发送版本
         if (this._socket instanceof SSLSocket) {
             TlsUtils.logPeerCertificateInfo(((SSLSocket) this._socket).getSession());
         }
@@ -219,7 +226,10 @@ public class SocketFrameHandler implements FrameHandler {
 
     @Override
     public void close() {
-        try { _socket.setSoLinger(true, SOCKET_CLOSING_TIMEOUT); } catch (Exception _e) {}
+        try {
+            _socket.setSoLinger(true, SOCKET_CLOSING_TIMEOUT);
+        } catch (Exception _e) {
+        }
         // async flush if possible
         // see https://github.com/rabbitmq/rabbitmq-java-client/issues/194
         Callable<Void> flushCallable = new Callable<Void>() {
@@ -231,17 +241,20 @@ public class SocketFrameHandler implements FrameHandler {
         };
         Future<Void> flushTask = null;
         try {
-            if(this._shutdownExecutor == null) {
+            if (this._shutdownExecutor == null) {
                 flushCallable.call();
             } else {
                 flushTask = this._shutdownExecutor.submit(flushCallable);
                 flushTask.get(SOCKET_CLOSING_TIMEOUT, TimeUnit.SECONDS);
             }
-        } catch(Exception e) {
-            if(flushTask != null) {
+        } catch (Exception e) {
+            if (flushTask != null) {
                 flushTask.cancel(true);
             }
         }
-        try { _socket.close();                                   } catch (Exception _e) {}
+        try {
+            _socket.close();
+        } catch (Exception _e) {
+        }
     }
 }

@@ -41,7 +41,7 @@ public class AMQCommand implements Command {
      * See {@link #checkEmptyFrameSize}, an assertion checked at
      * startup.
      */
-    public static final int EMPTY_FRAME_SIZE = 8;
+    public static final int EMPTY_FRAME_SIZE = 8; // 一个空贞构成
 
     /** The assembler for this command - synchronised on - contains all the state */
     private final CommandAssembler assembler;
@@ -197,7 +197,7 @@ public class AMQCommand implements Command {
     /**
      * Since we're using a pre-computed value for EMPTY_FRAME_SIZE we
      * check this is actually correct when run against the framing
-     * code in Frame.
+     * code in Frame.  由于我们使用预先计算的空帧大小值，因此在frame中对帧代码运行时，我们会检查这是否正确。
      */
     private static void checkEmptyFrameSize() {
         Frame f = new Frame(AMQP.FRAME_BODY, 0, new byte[0]);

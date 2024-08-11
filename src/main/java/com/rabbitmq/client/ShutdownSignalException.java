@@ -102,8 +102,10 @@ public class ShutdownSignalException extends RuntimeException implements Sensibl
     /** @return true if this exception was caused by explicit application
      * action; false if it originated with the broker or as a result
      * of detectable non-deliberate application failure
+     *
+     * 如果此异常是由显式应用程序操作引起的，则为True；如果它源于broker或由于可检测到的非故意应用程序故障，则为false
      */
-    public boolean isInitiatedByApplication() { return _initiatedByApplication; }
+    public boolean isInitiatedByApplication() { return _initiatedByApplication; } // 由应用程序启动
 
     /** @return the reason, if any */
     public Method getReason() { return _reason; }

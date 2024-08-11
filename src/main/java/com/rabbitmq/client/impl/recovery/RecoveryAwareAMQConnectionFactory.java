@@ -50,7 +50,7 @@ public class RecoveryAwareAMQConnectionFactory {
         this.params = params;
         this.factory = factory;
         this.addressResolver = addressResolver;
-        this.metricsCollector = metricsCollector;
+          this.metricsCollector = metricsCollector;
         this.observationCollector = observationCollector;
     }
 
@@ -62,11 +62,11 @@ public class RecoveryAwareAMQConnectionFactory {
     public RecoveryAwareAMQConnection newConnection() throws IOException, TimeoutException {
         Exception lastException = null;
         List<Address> resolved = addressResolver.getAddresses();
-        List<Address> shuffled = addressResolver.maybeShuffle(resolved);
+        List<Address> shuffled = addressResolver.maybeShuffle(resolved); // 乱序
 
         for (Address addr : shuffled) {
             try {
-                FrameHandler frameHandler = factory.create(addr, connectionName());
+                FrameHandler frameHandler = factory.create(addr, connectionName()); // SocketFrameHandler
                 RecoveryAwareAMQConnection conn = createConnection(params, frameHandler, metricsCollector);
                 conn.start();
                 metricsCollector.newConnection(conn);
@@ -94,7 +94,7 @@ public class RecoveryAwareAMQConnectionFactory {
     }
 
     private String connectionName() {
-        Map<String, Object> clientProperties = params.getClientProperties();
+        Map<String, Object> clientProperties = params.getClientProperties(); // {product=RabbitMQ, copyright=Copyright (c) 2007-2023 Broadcom Inc. and/or its subsidiaries., capabilities={exchange_exchange_bindings=true, connection.blocked=true, authentication_failure_close=true, basic.nack=true, publisher_confirms=true, consumer_cancel_notify=true}, information=Licensed under the MPL. See https://www.rabbitmq.com/, version=6.0.0-SNAPSHOT, platform=Java}
         if (clientProperties == null) {
             return null;
         } else {

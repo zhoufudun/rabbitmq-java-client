@@ -28,73 +28,72 @@ import com.rabbitmq.client.LongString;
 /**
  * Utility for working with {@link LongString}s.
  */
-public class LongStringHelper
-{
+public class LongStringHelper {
     /**
      * Private API - Implementation of {@link LongString}. When
      * interpreting bytes as a string, uses UTF-8 encoding.
      */
     private static class ByteArrayLongString
-        implements LongString
-    {
-        private final byte [] bytes;
+            implements LongString {
+        private final byte[] bytes;
 
-        public ByteArrayLongString(byte[] bytes)
-        {
+        public ByteArrayLongString(byte[] bytes) {
             this.bytes = bytes;
         }
 
-        @Override public boolean equals(Object o)
-        {
-            if(o instanceof LongString) {
-                LongString other = (LongString)o;
+        @Override
+        public boolean equals(Object o) {
+            if (o instanceof LongString) {
+                LongString other = (LongString) o;
                 return Arrays.equals(this.bytes, other.getBytes());
             }
 
             return false;
         }
 
-        @Override public int hashCode()
-        {
-           return Arrays.hashCode(this.bytes);
+        @Override
+        public int hashCode() {
+            return Arrays.hashCode(this.bytes);
         }
 
-        /** {@inheritDoc} */
+        /**
+         * {@inheritDoc}
+         */
         @Override
-        public byte[] getBytes()
-        {
+        public byte[] getBytes() {
             return bytes;
         }
 
-        /** {@inheritDoc} */
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public DataInputStream getStream()
-            throws IOException
-        {
+                throws IOException {
             return new DataInputStream(new ByteArrayInputStream(bytes));
         }
 
-        /** {@inheritDoc} */
+        /**
+         * {@inheritDoc}
+         */
         @Override
-        public long length()
-        {
+        public long length() {
             return bytes.length;
         }
 
         @Override
-        public String toString()
-        {
+        public String toString() {
             return new String(bytes, Charset.forName("utf-8"));
         }
     }
 
     /**
      * Converts a String to a LongString using UTF-8 encoding.
+     *
      * @param string the string to wrap
      * @return a LongString wrapping it
      */
-    public static LongString asLongString(String string)
-    {
+    public static LongString asLongString(String string) { // 举例：把用户名和密码组合在一起：guestguest
         if (string == null)
             return null;
         return new ByteArrayLongString(string.getBytes(Charset.forName("utf-8")));
@@ -102,12 +101,12 @@ public class LongStringHelper
 
     /**
      * Converts a binary block to a LongString.
+     *
      * @param bytes the data to wrap
      * @return a LongString wrapping it
      */
-    public static LongString asLongString(byte [] bytes)
-    {
-        if (bytes==null) return null;
+    public static LongString asLongString(byte[] bytes) {
+        if (bytes == null) return null;
         return new ByteArrayLongString(bytes);
     }
 }

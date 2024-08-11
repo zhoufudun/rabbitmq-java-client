@@ -41,6 +41,8 @@ import java.util.function.Supplier;
  * broker for AMQP connections.
  * <p>
  * Instances are preferably created with {@link DefaultCredentialsRefreshServiceBuilder}.
+ *
+ * 一句话，客户端定时发送名字和密码给broker进行认证。
  */
 public class DefaultCredentialsRefreshService implements CredentialsRefreshService {
 

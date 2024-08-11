@@ -80,7 +80,7 @@ public class Frame {
      * Protected API - Factory method to instantiate a Frame by reading an
      * AMQP-wire-protocol frame from the given input stream.
      *
-     * @return a new Frame if we read a frame successfully, otherwise null
+     * @return a new Frame if we read a frame successfully, otherwise null //  一个请求包括三个内容：new Frame(type, channel, payload)
      */
     public static Frame readFrom(DataInputStream is, int maxPayloadSize) throws IOException {
         int type;
@@ -198,7 +198,7 @@ public class Frame {
             os.writeInt(payload.length);
             os.write(payload);
         }
-        os.write(AMQP.FRAME_END);
+        os.write(AMQP.FRAME_END); // 代表一贞结束
     }
 
     public int size() {
