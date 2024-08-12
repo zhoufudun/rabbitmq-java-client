@@ -24,7 +24,7 @@ import com.rabbitmq.client.UnexpectedFrameError;
 import static java.lang.String.format;
 
 /**
- * Class responsible for piecing together a command from a series of {@link Frame}s.
+ * Class responsible for piecing together a command from a series of {@link Frame}s. 负责将一系列帧（Frames）拼接成命令的类
  * <p/><b>Concurrency</b><br/>
  * This class is thread-safe, since all methods are synchronised. Callers should not
  * synchronise on objects of this class unless they are sole owners.
@@ -35,12 +35,12 @@ final class CommandAssembler {
 
     /** Current state, used to decide how to handle each incoming frame. */
     private enum CAState {
-        EXPECTING_METHOD, EXPECTING_CONTENT_HEADER, EXPECTING_CONTENT_BODY, COMPLETE
+        EXPECTING_METHOD, EXPECTING_CONTENT_HEADER, EXPECTING_CONTENT_BODY, COMPLETE // “EXPECTING_METHOD” 可以翻译为 “等待方法”，“EXPECTING_CONTENT_HEADER” 可以翻译为 “等待内容头部”，“EXPECTING_CONTENT_BODY” 可以翻译为 “等待内容主体”，“COMPLETE” 可以翻译为 “完成”
     }
     private CAState state;
 
     /** The method for this command */
-    private Method method;
+    private Method method; // #method<connection.start>(version-major=0, version-minor=9, server-properties={cluster_name=rabbit@WIN-20230608VMY, copyright=Copyright (c) 2007-2024 Broadcom Inc and/or its subsidiaries, product=RabbitMQ, capabilities={consumer_priorities=true, exchange_exchange_bindings=true, connection.blocked=true, authentication_failure_close=true, per_consumer_qos=true, basic.nack=true, direct_reply_to=true, publisher_confirms=true, consumer_cancel_notify=true}, information=Licensed under the MPL 2.0. Website: https://rabbitmq.com, version=3.13.2, platform=Erlang/OTP 27.0}, mechanisms=PLAIN AMQPLAIN, locales=en_US)
     
     /** The content header for this command */
     private AMQContentHeader contentHeader;

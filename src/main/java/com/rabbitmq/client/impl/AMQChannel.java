@@ -63,7 +63,7 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
     /**
      * The connection this channel is associated with.
      */
-    private final AMQConnection _connection;
+    private final AMQConnection _connection; // RecoveryAwareAMQConnection
 
     /**
      * This channel's channel number.
@@ -201,9 +201,9 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
         // not be processed further.  It will return true for
         // asynchronous commands (deliveries/returns/other events),
         // and false for commands that should be passed on to some
-        // waiting RPC continuation.
+        // waiting RPC continuation. 首先，将命令提供给异步命令处理机制，该机制充当传入命令流的过滤器。如果 processAsync() 返回 true，表示该命令已经被过滤器处理过，因此不应进一步处理。对于异步命令（交付/返回/其他事件），它将返回 true；而对于应传递给某个等待中的 RPC 继续处理的命令，它将返回 false。
         this._trafficListener.read(command);
-        if (!processAsync(command)) {
+        if (!processAsync(command)) { // 对于应传递给某个等待中的 RPC 继续处理的命令，它将返回 false
             // The filter decided not to handle/consume the command,
             // so it must be a response to an earlier RPC.
 
@@ -221,7 +221,7 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
                     _channelLock.unlock();
                 }
             }
-            final RpcWrapper nextOutstandingRpc = nextOutstandingRpc();
+            final RpcWrapper nextOutstandingRpc = nextOutstandingRpc(); // 下一个待处理的RPC
             // the outstanding RPC can be null when calling Channel#asyncRpc
             if (nextOutstandingRpc != null) {
                 nextOutstandingRpc.complete(command);
@@ -242,9 +242,9 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
         _channelLock.lock();
         try {
             boolean waitClearedInterruptStatus = false;
-            while (_activeRpc != null) {
+            while (_activeRpc != null) { // 将新的请求准备加入时，发现已经存在一个正在等待处理的请求，此时需要等待上一个请求被处理，上一个请求被处理后_activeRpc会被置为null，并且唤醒_channelLockCondition.await()，这时本次的请求才能存入
                 try {
-                    _channelLockCondition.await();
+                    _channelLockCondition.await(); //
                 } catch (InterruptedException e) { //NOSONAR
                     waitClearedInterruptStatus = true;
                     // No Sonar: we re-interrupt the thread later
@@ -253,7 +253,7 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
             if (waitClearedInterruptStatus) {
                 Thread.currentThread().interrupt();
             }
-            _activeRpc = rpcWrapperSupplier.get(); // RpcContinuationRpcWrapper
+            _activeRpc = rpcWrapperSupplier.get(); // RpcContinuationRpcWrapper： 设置一下当前激活中的请求，这个请求是需要再MainLoop线程中收到服务端的消息后，处理服务端的消息，然后再处理本次激活的_activeRpc，处理完后清空_activeRpc，在唤醒其他正在调用doEnqueueRpc的线程
         } finally {
             _channelLock.unlock();
         }
@@ -273,7 +273,7 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
         try {
             RpcWrapper result = _activeRpc;
             _activeRpc = null;
-            _channelLockCondition.signalAll();
+            _channelLockCondition.signalAll(); // 唤醒其他等待_channelLockCondition的线程：比如
             return result;
         } finally {
             _channelLock.unlock();

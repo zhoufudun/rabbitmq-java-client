@@ -29,7 +29,7 @@ public class ValueOrException<V, E extends Throwable & SensibleClone<E>> {
     private ValueOrException(V value, E exception, boolean useValue) {
         _useValue = useValue;
         if (useValue) {
-            _value = value;
+            _value = value; // {#method<connection.start>(version-major=0, version-minor=9, server-properties={cluster_name=rabbit@WIN-20230608VMY, copyright=Copyright (c) 2007-2024 Broadcom Inc and/or its subsidiaries, product=RabbitMQ, capabilities={consumer_priorities=true, exchange_exchange_bindings=true, connection.blocked=true, authentication_failure_close=true, per_consumer_qos=true, basic.nack=true, direct_reply_to=true, publisher_confirms=true, consumer_cancel_notify=true}, information=Licensed under the MPL 2.0. Website: https://rabbitmq.com, version=3.13.2, platform=Erlang/OTP 27.0}, mechanisms=PLAIN AMQPLAIN, locales=en_US), null, ""}
             _exception = null;
         } else {
             _value = null;

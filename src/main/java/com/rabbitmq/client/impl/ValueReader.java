@@ -34,101 +34,105 @@ import com.rabbitmq.client.MalformedFrameException;
 /**
  * Helper class to read AMQP wire-protocol encoded values.
  */
-public class ValueReader
-{
+public class ValueReader {
     private static final long INT_MASK = 0xffffffffL;
 
     /**
      * Protected API - Cast an int to a long without extending the
      * sign bit of the int out into the high half of the long.
      */
-    private static long unsignedExtend(int value)
-    {
+    private static long unsignedExtend(int value) {
         long extended = value;
         return extended & INT_MASK;
     }
 
-    /** The stream we are reading from. */
+    /**
+     * The stream we are reading from.
+     */
     private final DataInputStream in;
 
     /**
      * Construct a MethodArgumentReader streaming over the given DataInputStream.
      */
-    public ValueReader(DataInputStream in)
-    {
+    public ValueReader(DataInputStream in) {
         this.in = in;
     }
 
-    /** Convenience method - reads a short string from a DataInput
+    /**
+     * Convenience method - reads a short string from a DataInput
      * Stream.
      */
     private static String readShortstr(DataInputStream in)
-        throws IOException
-    {
-        byte [] b = new byte[in.readUnsignedByte()];
+            throws IOException {
+        byte[] b = new byte[in.readUnsignedByte()];
         in.readFully(b);
         return new String(b, "utf-8");
     }
 
-    /** Public API - reads a short string. */
+    /**
+     * Public API - reads a short string.
+     */
     public final String readShortstr()
-        throws IOException
-    {
+            throws IOException {
         return readShortstr(this.in);
     }
 
-    /** Convenience method - reads a 32-bit-length-prefix
+    /**
+     * Convenience method - reads a 32-bit-length-prefix
      * byte vector from a DataInputStream.
      */
     private static byte[] readBytes(final DataInputStream in)
-        throws IOException
-    {
+            throws IOException {
         final long contentLength = unsignedExtend(in.readInt());
-        if(contentLength < Integer.MAX_VALUE) {
-            final byte [] buffer = new byte[(int)contentLength];
+        if (contentLength < Integer.MAX_VALUE) {
+            final byte[] buffer = new byte[(int) contentLength];
             in.readFully(buffer);
             return buffer;
         } else {
             throw new UnsupportedOperationException
-                ("Very long byte vectors and strings not currently supported");
+                    ("Very long byte vectors and strings not currently supported");
         }
     }
 
-    /** Convenience method - reads a long string argument
+    /**
+     * Convenience method - reads a long string argument
      * from a DataInputStream.
      */
     private static LongString readLongstr(final DataInputStream in)
-        throws IOException
-    {
+            throws IOException {
         return LongStringHelper.asLongString(readBytes(in));
     }
 
 
-    /** Public API - reads a long string. */
+    /**
+     * Public API - reads a long string.
+     */
     public final LongString readLongstr()
-        throws IOException
-    {
+            throws IOException {
         return readLongstr(this.in);
     }
 
-    /** Public API - reads a short integer. */
+    /**
+     * Public API - reads a short integer.
+     */
     public final int readShort()
-        throws IOException
-    {
+            throws IOException {
         return in.readUnsignedShort();
     }
 
-    /** Public API - reads an integer. */
+    /**
+     * Public API - reads an integer.
+     */
     public final int readLong()
-        throws IOException
-    {
+            throws IOException {
         return in.readInt();
     }
 
-    /** Public API - reads a long integer. */
+    /**
+     * Public API - reads a long integer.
+     */
     public final long readLonglong()
-        throws IOException
-    {
+            throws IOException {
         return in.readLong();
     }
 
@@ -137,18 +141,17 @@ public class ValueReader
      * called by {@link ContentHeaderPropertyReader}.
      */
     private static Map<String, Object> readTable(DataInputStream in)
-        throws IOException
-    {
+            throws IOException {
         long tableLength = unsignedExtend(in.readInt());
         if (tableLength == 0) return Collections.emptyMap();
-        
+
         Map<String, Object> table = new HashMap<String, Object>();
         DataInputStream tableIn = new DataInputStream
-            (new TruncatedInputStream(in, tableLength));
-        while(tableIn.available() > 0) {
+                (new TruncatedInputStream(in, tableLength));
+        while (tableIn.available() > 0) {
             String name = readShortstr(tableIn);
             Object value = readFieldValue(tableIn);
-            if(!table.containsKey(name))
+            if (!table.containsKey(name))
                 table.put(name, value);
         }
         return table;
@@ -156,74 +159,75 @@ public class ValueReader
 
     // package protected for testing
     static Object readFieldValue(DataInputStream in)
-        throws IOException {
+            throws IOException {
         Object value = null;
-        switch(in.readUnsignedByte()) {
-          case 'S':
-              value = readLongstr(in);
-              break;
-          case 'I':
-              value = in.readInt();
-              break;
-          case 'i':
-              value = readUnsignedInt(in);
-              break;
-          case 'D':
-              int scale = in.readUnsignedByte();
-              byte [] unscaled = new byte[4];
-              in.readFully(unscaled);
-              value = new BigDecimal(new BigInteger(unscaled), scale);
-              break;
-          case 'T':
-              value = readTimestamp(in);
-              break;
-          case 'F':
-              value = readTable(in);
-              break;
-          case 'A':
-              value = readArray(in);
-              break;
-          case 'b':
-              value = in.readByte();
-              break;
-          case 'B':
-              value = in.readUnsignedByte();
-              break;
-          case 'd':
-              value = in.readDouble();
-              break;
-          case 'f':
-              value = in.readFloat();
-              break;
-          case 'l':
-              value = in.readLong();
-              break;
-          case 's':
-              value = in.readShort();
-              break;
-          case 'u':
-              value = in.readUnsignedShort();
-              break;
-          case 't':
-              value = in.readBoolean();
-              break;
-          case 'x':
-              value = readBytes(in);
-              break;
-          case 'V':
-              value = null;
-              break;
-          default:
-              throw new MalformedFrameException
-                  ("Unrecognised type in table");
+        switch (in.readUnsignedByte()) {
+            case 'S':
+                value = readLongstr(in);
+                break;
+            case 'I':
+                value = in.readInt();
+                break;
+            case 'i':
+                value = readUnsignedInt(in);
+                break;
+            case 'D':
+                int scale = in.readUnsignedByte();
+                byte[] unscaled = new byte[4];
+                in.readFully(unscaled);
+                value = new BigDecimal(new BigInteger(unscaled), scale);
+                break;
+            case 'T':
+                value = readTimestamp(in);
+                break;
+            case 'F':
+                value = readTable(in);
+                break;
+            case 'A':
+                value = readArray(in);
+                break;
+            case 'b':
+                value = in.readByte();
+                break;
+            case 'B':
+                value = in.readUnsignedByte();
+                break;
+            case 'd':
+                value = in.readDouble();
+                break;
+            case 'f':
+                value = in.readFloat();
+                break;
+            case 'l':
+                value = in.readLong();
+                break;
+            case 's':
+                value = in.readShort();
+                break;
+            case 'u':
+                value = in.readUnsignedShort();
+                break;
+            case 't':
+                value = in.readBoolean();
+                break;
+            case 'x':
+                value = readBytes(in);
+                break;
+            case 'V':
+                value = null;
+                break;
+            default:
+                throw new MalformedFrameException
+                        ("Unrecognised type in table");
         }
         return value;
     }
 
-    /** Read an unsigned int */
-    private static long readUnsignedInt(DataInputStream in) 
-        throws IOException 
-    {
+    /**
+     * Read an unsigned int
+     */
+    private static long readUnsignedInt(DataInputStream in)
+            throws IOException {
         long ch1 = in.read();
         long ch2 = in.read();
         long ch3 = in.read();
@@ -233,47 +237,52 @@ public class ValueReader
         return ((ch1 << 24) + (ch2 << 16) + (ch3 << 8) + ch4);
     }
 
-    /** Read a field-array */
+    /**
+     * Read a field-array
+     */
     private static List<Object> readArray(DataInputStream in)
-        throws IOException
-    {
+            throws IOException {
         long length = unsignedExtend(in.readInt());
         DataInputStream arrayIn = new DataInputStream
-            (new TruncatedInputStream(in, length));
+                (new TruncatedInputStream(in, length));
         List<Object> array = new ArrayList<Object>();
-        while(arrayIn.available() > 0) {
+        while (arrayIn.available() > 0) {
             Object value = readFieldValue(arrayIn);
             array.add(value);
         }
         return array;
     }
 
-    /** Public API - reads a table. */
+    /**
+     * Public API - reads a table.
+     */
     public final Map<String, Object> readTable()
-        throws IOException
-    {
+            throws IOException {
         return readTable(this.in);
     }
 
-    /** Public API - reads an octet. */
+    /**
+     * Public API - reads an octet.
+     */
     public final int readOctet()
-        throws IOException
-    {
+            throws IOException {
         return in.readUnsignedByte();
     }
 
-    /** Convenience method - reads a timestamp argument from the DataInputStream. */
+    /**
+     * Convenience method - reads a timestamp argument from the DataInputStream.
+     */
     private static Date readTimestamp(DataInputStream in)
-        throws IOException
-    {
-        return new Date(in.readLong()*1000);
+            throws IOException {
+        return new Date(in.readLong() * 1000);
     }
 
 
-    /** Public API - reads an timestamp. */
+    /**
+     * Public API - reads an timestamp.
+     */
     public final Date readTimestamp()
-        throws IOException
-    {
+            throws IOException {
         return readTimestamp(this.in);
     }
 

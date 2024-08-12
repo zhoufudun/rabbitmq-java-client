@@ -124,7 +124,7 @@ public class Frame {
             throw new MalformedFrameException("Bad frame end marker: " + frameEndMarker);
         }
 
-        return new Frame(type, channel, payload);
+        return new Frame(type, channel, payload); // type=1, channel=0, payload= byte[512]
     }
 
     /**

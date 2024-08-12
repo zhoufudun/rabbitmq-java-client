@@ -299,7 +299,7 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
     AMQChannel createChannel0() {
         return new AMQChannel(this, 0) {
             @Override
-            public boolean processAsync(Command c) throws IOException {
+            public boolean processAsync(Command c) throws IOException { // {#method<connection.start>(version-major=0, version-minor=9, server-properties={cluster_name=rabbit@WIN-20230608VMY, copyright=Copyright (c) 2007-2024 Broadcom Inc and/or its subsidiaries, product=RabbitMQ, capabilities={consumer_priorities=true, exchange_exchange_bindings=true, connection.blocked=true, authentication_failure_close=true, per_consumer_qos=true, basic.nack=true, direct_reply_to=true, publisher_confirms=true, consumer_cancel_notify=true}, information=Licensed under the MPL 2.0. Website: https://rabbitmq.com, version=3.13.2, platform=Erlang/OTP 27.0}, mechanisms=PLAIN AMQPLAIN, locales=en_US), null, ""}
                 return getConnection().processControlCommand(c);
             }
         };
@@ -395,16 +395,16 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
             }
 
             LongString challenge = null;
-            LongString response = sm.handleChallenge(null, username, password);
+            LongString response = sm.handleChallenge(null, username, password); //guestguest
 
-            do {
-                Method method = (challenge == null) //StartOK=#method<connection.start-ok>(client-properties={product=RabbitMQ, copyright=Copyright (c) 2007-2023 Broadcom Inc. and/or its subsidiaries., capabilities={exchange_exchange_bindings=true, connection.blocked=true, authentication_failure_close=true, basic.nack=true, publisher_confirms=true, consumer_cancel_notify=true}, information=Licensed under the MPL. See https://www.rabbitmq.com/, version=6.0.0-SNAPSHOT, platform=Java}, mechanism=PLAIN, response= guest guest, locale=en_US)
+            do { // 应答给服务端
+                Method method = (challenge == null) // StartOK=#method<connection.start-ok>(client-properties={product=RabbitMQ, copyright=Copyright (c) 2007-2023 Broadcom Inc. and/or its subsidiaries., capabilities={exchange_exchange_bindings=true, connection.blocked=true, authentication_failure_close=true, basic.nack=true, publisher_confirms=true, consumer_cancel_notify=true}, information=Licensed under the MPL. See https://www.rabbitmq.com/, version=6.0.0-SNAPSHOT, platform=Java}, mechanism=PLAIN, response= guest guest, locale=en_US)
                         ? new AMQP.Connection.StartOk.Builder()
-                        .clientProperties(_clientProperties)
+                        .clientProperties(_clientProperties) // 将客户端的属性应答给服务端
                         .mechanism(sm.getName())
                         .response(response)
-                        .build()
-                        : new AMQP.Connection.SecureOk.Builder().response(response).build();
+                        .build() //
+                        : new AMQP.Connection.SecureOk.Builder().response(response).build(); // 应答给服务端？
 
                 try {
                     Method serverResponse = _channel0.rpc(method, handshakeTimeout / 2).getMethod();
@@ -919,7 +919,7 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
     @SuppressWarnings("unused")
     public boolean processControlCommand(Command c) throws IOException {
         // Similar trick to ChannelN.processAsync used here, except
-        // we're interested in whole-connection quiescing.
+        // we're interested in whole-connection quiescing. 与 ChannelN.processAsync 使用的技巧类似，只不过这里我们关注的是整个连接的静默处理
 
         // See the detailed comments in ChannelN.processAsync.
 
