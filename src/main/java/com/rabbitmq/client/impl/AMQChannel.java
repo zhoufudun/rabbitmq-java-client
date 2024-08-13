@@ -137,8 +137,8 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
     void handleFrame(Frame frame) throws IOException {
         AMQCommand command = _command;
         if (command.handleFrame(frame)) { // a complete command has rolled off the assembly line
-            _command = new AMQCommand(this.maxInboundMessageBodySize); // prepare for the next one
-            handleCompleteInboundCommand(command);
+            _command = new AMQCommand(this.maxInboundMessageBodySize); // prepare for the next one 重置，为下一个请求做准备
+            handleCompleteInboundCommand(command); // 处理完整的入站命令
         }
     }
 
@@ -206,25 +206,26 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
         if (!processAsync(command)) { // 对于应传递给某个等待中的 RPC 继续处理的命令，它将返回 false
             // The filter decided not to handle/consume the command,
             // so it must be a response to an earlier RPC.
-
+            // 走到这里说明：过滤器决定不处理/消费该命令，因此它一定是对先前RPC的响应
             if (_checkRpcResponseType) {
                 _channelLock.lock();
-                try {
+                try { // 在调用 nextOutstandingRpc() 之前，检查这个回复命令是否是针对当前等待的请求。
                     // check if this reply command is intended for the current waiting request before calling nextOutstandingRpc()
                     if (_activeRpc != null && !_activeRpc.canHandleReply(command)) {
                         // this reply command is not intended for the current waiting request
                         // most likely a previous request timed out and this command is the reply for that.
                         // Throw this reply command away so we don't stop the current request from waiting for its reply
+                        // 这个回复命令可能并非针对当前等待的请求，很可能是之前的请求超时了，而这个命令是该请求的回复。丢弃这个回复命令，以免阻止当前请求继续等待它的回复。
                         return;
                     }
                 } finally {
                     _channelLock.unlock();
                 }
             }
-            final RpcWrapper nextOutstandingRpc = nextOutstandingRpc(); // 下一个待处理的RPC
+            final RpcWrapper nextOutstandingRpc = nextOutstandingRpc(); // 获取当前待处理完成的RPC请求（等待应答）
             // the outstanding RPC can be null when calling Channel#asyncRpc
             if (nextOutstandingRpc != null) {
-                nextOutstandingRpc.complete(command);
+                nextOutstandingRpc.complete(command); // 将服务端返回的结果封装到一个对象中，并且唤醒正在等待此结果的RPC请求线程，唤醒它之后，它可以获取这个结果。
                 markRpcFinished();
             }
         }
@@ -271,9 +272,9 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
     public RpcWrapper nextOutstandingRpc() {
         _channelLock.lock();
         try {
-            RpcWrapper result = _activeRpc;
-            _activeRpc = null;
-            _channelLockCondition.signalAll(); // 唤醒其他等待_channelLockCondition的线程：比如
+            RpcWrapper result = _activeRpc; // 临时保存上一个请求
+            _activeRpc = null; // 清空上一个请求
+            _channelLockCondition.signalAll(); // 唤醒其他等待_channelLockCondition的线程：比如doEnqueueRpc中的 _channelLockCondition.await();
             return result;
         } finally {
             _channelLock.unlock();
@@ -358,7 +359,7 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
         rpc(m, k);
 
         try {
-            return k.getReply(timeout);
+            return k.getReply(timeout); // 等待服务端的应答
         } catch (TimeoutException e) {
             cleanRpcChannelState();
             throw e;
@@ -380,7 +381,7 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
             throws IOException {
         _channelLock.lock();
         try {
-            enqueueRpc(k);
+            enqueueRpc(k); // AMQChannel： 将等待应答的请求保存起来，再将应答消息异步发送出去，服务端回复消息，客户端接受消息，唤醒等待应答的线程。
             quiescingTransmit(m);
         } finally {
             _channelLock.unlock();
@@ -483,7 +484,7 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
     public void quiescingTransmit(Method m) throws IOException {
         _channelLock.lock();
         try {
-            quiescingTransmit(new AMQCommand(m));
+            quiescingTransmit(new AMQCommand(m)); // 给服务端的消息封装起来，异步发送
         } finally {
             _channelLock.unlock();
         }
@@ -492,9 +493,9 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
     public void quiescingTransmit(AMQCommand c) throws IOException {
         _channelLock.lock();
         try {
-            if (c.getMethod().hasContent()) {
+            if (c.getMethod().hasContent()) { // 如果当前要传输的指令有内容，需要加锁等待其他的发送完成
                 while (_blockContent) {
-                    try {
+                    try { // ？
                         _channelLockCondition.await();
                     } catch (InterruptedException ignored) {
                         Thread.currentThread().interrupt();
@@ -506,7 +507,7 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
                     ensureIsOpen();
                 }
             }
-            this._trafficListener.write(c);
+            this._trafficListener.write(c);   // 流控
             c.transmit(this);
         } finally {
             _channelLock.unlock();
@@ -636,7 +637,7 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
         }
 
         @Override
-        public AMQCommand transformReply(AMQCommand command) {
+        public AMQCommand transformReply(AMQCommand command) { // command是服务端的应答消息
             return command;
         }
     }

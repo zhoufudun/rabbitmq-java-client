@@ -57,7 +57,7 @@ final class HeartbeatSender {
         this.threadFactory = threadFactory;
     }
 
-    public void signalActivity() {
+    public void signalActivity() { // 更新心跳上次激活时间戳
         this.lastActivityTime = System.nanoTime();
     }
 

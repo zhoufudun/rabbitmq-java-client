@@ -386,7 +386,7 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
             if (credentialsProvider.getTimeBeforeExpiration() != null) {
                 if (this.credentialsRefreshService == null) {
                     throw new IllegalStateException("Credentials can expire, a credentials refresh service should be set");
-                }
+                } // 检查认证是否过期，如果过期需要重新认证一次
                 if (this.credentialsRefreshService.isApproachingExpiration(credentialsProvider.getTimeBeforeExpiration())) {
                     credentialsProvider.refresh();
                     username = credentialsProvider.getUsername();
@@ -397,7 +397,7 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
             LongString challenge = null;
             LongString response = sm.handleChallenge(null, username, password); //guestguest
 
-            do { // 应答给服务端
+            do { // method应答给服务端
                 Method method = (challenge == null) // StartOK=#method<connection.start-ok>(client-properties={product=RabbitMQ, copyright=Copyright (c) 2007-2023 Broadcom Inc. and/or its subsidiaries., capabilities={exchange_exchange_bindings=true, connection.blocked=true, authentication_failure_close=true, basic.nack=true, publisher_confirms=true, consumer_cancel_notify=true}, information=Licensed under the MPL. See https://www.rabbitmq.com/, version=6.0.0-SNAPSHOT, platform=Java}, mechanism=PLAIN, response= guest guest, locale=en_US)
                         ? new AMQP.Connection.StartOk.Builder()
                         .clientProperties(_clientProperties) // 将客户端的属性应答给服务端
@@ -673,19 +673,19 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
     }
 
     /**
-     * Public API - sends a frame directly to the broker.
+     * Public API - sends a frame directly to the broker. 直接将一个帧发送到代理（broker）
      */
     void writeFrame(Frame f) throws IOException {
-        _frameHandler.writeFrame(f);
+        _frameHandler.writeFrame(f); ///SocketFrameHandler
         _heartbeatSender.signalActivity();
     }
 
     /**
-     * Public API - flush the output buffers
+     * Public API - flush the output buffers 刷新输出缓冲区
      */
     public void flush() throws IOException {
         try {
-            _frameHandler.flush();
+            _frameHandler.flush(); // 将数据从用户缓冲区发送到内核缓冲区
         } catch (IOException ioe) {
             this.errorOnWriteListener.handle(this, ioe);
         }
@@ -922,7 +922,7 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
         // we're interested in whole-connection quiescing. 与 ChannelN.processAsync 使用的技巧类似，只不过这里我们关注的是整个连接的静默处理
 
         // See the detailed comments in ChannelN.processAsync.
-
+        // #method<connection.start>(version-major=0, version-minor=9, server-properties={cluster_name=rabbit@WIN-20230608VMY, copyright=Copyright (c) 2007-2024 Broadcom Inc and/or its subsidiaries, product=RabbitMQ, capabilities={consumer_priorities=true, exchange_exchange_bindings=true, connection.blocked=true, authentication_failure_close=true, per_consumer_qos=true, basic.nack=true, direct_reply_to=true, publisher_confirms=true, consumer_cancel_notify=true}, information=Licensed under the MPL 2.0. Website: https://rabbitmq.com, version=3.13.2, platform=Erlang/OTP 27.0}, mechanisms=PLAIN AMQPLAIN, locales=en_US)
         Method method = c.getMethod();
 
         if (isOpen()) {

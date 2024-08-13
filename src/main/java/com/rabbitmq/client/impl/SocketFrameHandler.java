@@ -56,7 +56,7 @@ public class SocketFrameHandler implements FrameHandler {
     private final DataInputStream _inputStream;
     private final Lock _inputStreamLock = new ReentrantLock();
 
-    /**
+    /** Socket 的输出流——向代理发送的数据——在某个对象上同步
      * Socket's outputstream - data to the broker - synchronized on
      */
     private final DataOutputStream _outputStream;
@@ -213,7 +213,7 @@ public class SocketFrameHandler implements FrameHandler {
     public void writeFrame(Frame frame) throws IOException {
         _outputStreamLock.lock();
         try {
-            frame.writeTo(_outputStream);
+            frame.writeTo(_outputStream); //
         } finally {
             _outputStreamLock.unlock();
         }

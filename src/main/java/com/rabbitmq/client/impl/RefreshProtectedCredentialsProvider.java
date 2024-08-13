@@ -82,7 +82,7 @@ public abstract class RefreshProtectedCredentialsProvider<T> implements Credenti
             try {
                 latch.set(new CountDownLatch(1));
                 refreshInProcess.set(true);
-                token.set(retrieveToken());
+                token.set(retrieveToken()); // 发送http请求给接服务端，认证，服务端返回token
                 LOGGER.debug("Token refreshed");
             } finally {
                 latch.get().countDown();

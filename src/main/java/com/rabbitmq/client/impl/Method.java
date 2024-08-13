@@ -76,11 +76,11 @@ public abstract class Method implements com.rabbitmq.client.Method {
         return sb.toString();
     }
 
-    public Frame toFrame(int channelNumber) throws IOException {
+    public Frame toFrame(int channelNumber) throws IOException { ///举例当前继承Method的是StartOK类
         Frame frame = new Frame(AMQP.FRAME_METHOD, channelNumber);
         DataOutputStream bodyOut = frame.getOutputStream();
-        bodyOut.writeShort(protocolClassId());
-        bodyOut.writeShort(protocolMethodId());
+        bodyOut.writeShort(protocolClassId()); // 不同消息类型有一个类ID，例如StartOk=10
+        bodyOut.writeShort(protocolMethodId()); // 不同消息类型有一个方法ID，例如StartOk=11
         MethodArgumentWriter argWriter = new MethodArgumentWriter(new ValueWriter(bodyOut));
         writeArgumentsTo(argWriter);
         argWriter.flush();

@@ -108,7 +108,7 @@ public class AMQCommand implements Command {
         return this.assembler.handleFrame(f);
     }
 
-    /**
+    /** 将此命令通过指定的通道发送到该通道的连接上，可能会分成多个帧进行发送
      * Sends this command down the named channel on the channel's
      * connection, possibly in multiple frames.
      * @param channel the channel on which to transmit the command
@@ -116,12 +116,12 @@ public class AMQCommand implements Command {
      */
     public void transmit(AMQChannel channel) throws IOException {
         int channelNumber = channel.getChannelNumber();
-        AMQConnection connection = channel.getConnection();
+        AMQConnection connection = channel.getConnection(); // RecoveryAwareAMQConnection
 
         assemblerLock.lock();
         try {
             Method m = this.assembler.getMethod();
-            if (m.hasContent()) {
+            if (m.hasContent()) { // 如果有内容，分多次写出数据
                 byte[] body = this.assembler.getContentBody();
 
                 Frame headerFrame = this.assembler.getContentHeader().toFrame(channelNumber, body.length);

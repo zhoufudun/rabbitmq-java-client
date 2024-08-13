@@ -22,7 +22,7 @@ import com.rabbitmq.client.ShutdownSignalException;
  */
 public class RpcContinuationRpcWrapper implements RpcWrapper {
 
-    private final AMQChannel.RpcContinuation continuation;
+    private final AMQChannel.RpcContinuation continuation; // SimpleBlockingRpcContinuation
 
     public RpcContinuationRpcWrapper(AMQChannel.RpcContinuation continuation) {
         this.continuation = continuation;

@@ -46,7 +46,7 @@ public interface CredentialsProvider {
      * <p>
      * If credentials do not expire, must return null. Default
      * behavior is to return null, assuming credentials never
-     * expire.
+     * expire. 如果认证不会过期，这里返回null
      *
      * @return time before expiration
      */
