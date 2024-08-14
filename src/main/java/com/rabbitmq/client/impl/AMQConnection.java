@@ -406,7 +406,7 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
                         .build() //
                         : new AMQP.Connection.SecureOk.Builder().response(response).build(); // 应答给服务端？
 
-                try {
+                try { // serverResponse=#method<connection.tune>(channel-max=2047, frame-max=131072, heartbeat=60)
                     Method serverResponse = _channel0.rpc(method, handshakeTimeout / 2).getMethod();
                     if (serverResponse instanceof AMQP.Connection.Tune) {
                         connTune = (AMQP.Connection.Tune) serverResponse;
@@ -418,11 +418,11 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
                     Method shutdownMethod = e.getReason();
                     if (shutdownMethod instanceof AMQP.Connection.Close) {
                         AMQP.Connection.Close shutdownClose = (AMQP.Connection.Close) shutdownMethod;
-                        if (shutdownClose.getReplyCode() == AMQP.ACCESS_REFUSED) {
+                        if (shutdownClose.getReplyCode() == AMQP.ACCESS_REFUSED) { // 明确是权限拒绝
                             throw new AuthenticationFailureException(shutdownClose.getReplyText());
                         }
                     }
-                    throw new PossibleAuthenticationFailureException(e);
+                    throw new PossibleAuthenticationFailureException(e); // 可能是认证失败
                 }
             } while (connTune == null);
         } catch (TimeoutException | IOException te) {
@@ -433,10 +433,10 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
             throw AMQChannel.wrap(sse);
         }
 
+        // 以上是连接建立过程
+
         try {
-            int negotiatedChannelMax =
-                    negotiateChannelMax(this.requestedChannelMax,
-                            connTune.getChannelMax());
+            int negotiatedChannelMax = negotiateChannelMax(this.requestedChannelMax, connTune.getChannelMax()); // 2047
 
             if (!checkUnsignedShort(negotiatedChannelMax)) {
                 throw new IllegalArgumentException("Negotiated channel max must be between 0 and " + MAX_UNSIGNED_SHORT + ": " + negotiatedChannelMax);
@@ -444,14 +444,10 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
 
             _channelManager = instantiateChannelManager(negotiatedChannelMax, threadFactory);
 
-            int frameMax =
-                    negotiatedMaxValue(this.requestedFrameMax,
-                            connTune.getFrameMax());
+            int frameMax = negotiatedMaxValue(this.requestedFrameMax, connTune.getFrameMax());
             this._frameMax = frameMax;
 
-            int negotiatedHeartbeat =
-                    negotiatedMaxValue(this.requestedHeartbeat,
-                            connTune.getHeartbeat());
+            int negotiatedHeartbeat = negotiatedMaxValue(this.requestedHeartbeat, connTune.getHeartbeat());
 
             if (!checkUnsignedShort(negotiatedHeartbeat)) {
                 throw new IllegalArgumentException("Negotiated heartbeat must be between 0 and " + MAX_UNSIGNED_SHORT + ": " + negotiatedHeartbeat);
@@ -459,10 +455,7 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
 
             setHeartbeat(negotiatedHeartbeat);
 
-            this.connectionInfo = new DefaultConnectionInfo(
-                    this._frameHandler.getAddress().getHostAddress(),
-                    this._frameHandler.getPort()
-            );
+            this.connectionInfo = new DefaultConnectionInfo(this._frameHandler.getAddress().getHostAddress(), this._frameHandler.getPort());
 
             _channel0.transmit(new AMQP.Connection.TuneOk.Builder()
                     .channelMax(negotiatedChannelMax)
@@ -538,9 +531,9 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
     }
 
     /**
-     * Private API, allows for easier simulation of bogus clients.
+     * Private API, allows for easier simulation of bogus clients. 允许更容易地模拟虚假客户端
      */
-    protected int negotiateChannelMax(int requestedChannelMax, int serverMax) {
+    protected int negotiateChannelMax(int requestedChannelMax, int serverMax) { //2047,2047
         return negotiatedMaxValue(requestedChannelMax, serverMax);
     }
 
@@ -828,7 +821,7 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
     }
 
     private void handleFailure(Throwable ex) {
-        if (ex instanceof EOFException) {
+        if (ex instanceof EOFException) { //  EOFException 通常在读取数据流（如文件、网络流、或者其他输入流）时，当没有更多数据可供读取但尝试继续读取时，会抛出该异常，例如，使用 ObjectInputStream 或 DataInputStream 读取对象或数据时，如果流已经到达末尾但仍然尝试读取数据，就会遇到 EOFException。
             if (!_brokerInitiatedShutdown)
                 shutdown(null, false, ex, true);
         } else {
@@ -839,7 +832,7 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
     }
 
     /**
-     * private API
+     * private API  关闭所有资源，处理器，IO线程，监听器等
      */
     public void doFinalShutdown() {
         if (finalShutdownStarted.compareAndSet(false, true)) {
@@ -1040,7 +1033,7 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
         finishShutdown(sse);
         return sse;
     }
-
+    // 关闭消费者
     private ShutdownSignalException startShutdown(Method reason,
                                                   boolean initiatedByApplication,
                                                   Throwable cause,
@@ -1048,12 +1041,12 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
         ShutdownSignalException sse = new ShutdownSignalException(true, initiatedByApplication,
                 reason, this);
         sse.initCause(cause);
-        if (!setShutdownCauseIfOpen(sse)) {
-            if (initiatedByApplication)
+        if (!setShutdownCauseIfOpen(sse)) { // 设置关闭信号失败
+            if (initiatedByApplication) // 是应用程序导致的异常
                 throw new AlreadyClosedException(getCloseReason(), cause);
         }
 
-        // stop any heartbeating
+        // stop any heartbeating  停止客户端的心跳线程
         _heartbeatSender.shutdown();
 
         _channel0.processShutdownSignal(sse, !initiatedByApplication, notifyRpc);

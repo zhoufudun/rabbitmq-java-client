@@ -24,7 +24,7 @@ import java.net.ConnectException;
 /**
  * An implementation of {@link com.rabbitmq.client.ExceptionHandler} that does not
  * close channels on unhandled consumer and listener exception.
- * 
+ * 一个 ExceptionHandler 的实现，它不会在未处理的消费者和监听器异常发生时关闭通道。该实现被 AMQConnection 使用
  * Used by {@link AMQConnection}.
  *
  * @see ExceptionHandler
@@ -122,7 +122,7 @@ public class ForgivingExceptionHandler implements ExceptionHandler {
         }
     }
 
-
+    // socket异常或者关闭
     private static boolean isSocketClosedOrConnectionReset(Throwable e) {
         return e instanceof IOException &&
             ("Connection reset".equals(e.getMessage()) || "Socket closed".equals(e.getMessage()) ||

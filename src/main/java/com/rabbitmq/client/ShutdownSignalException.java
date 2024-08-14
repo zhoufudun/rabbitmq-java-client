@@ -42,7 +42,7 @@ public class ShutdownSignalException extends RuntimeException implements Sensibl
     /** Possible explanation */
     private final Method _reason;
 
-    /** Either Channel or Connection instance, depending on _hardError */
+    /** Either Channel or Connection instance, depending on _hardError */  // Channel or Connection
     private final Object _ref;
 
     /**
@@ -72,8 +72,8 @@ public class ShutdownSignalException extends RuntimeException implements Sensibl
                                    Method reason, Object ref, String messagePrefix, Throwable cause)
     {
         super(composeMessage(hardError, initiatedByApplication, reason, messagePrefix, cause));
-        this._hardError = hardError;
-        this._initiatedByApplication = initiatedByApplication;
+        this._hardError = hardError; // 是否是验证错误
+        this._initiatedByApplication = initiatedByApplication; // 是否程序触发的异常
         this._reason = reason;
         // Depending on hardError what we got is either Connection or Channel reference
         this._ref = ref;

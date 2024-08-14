@@ -153,7 +153,7 @@ public class AMQCommand implements Command {
             assemblerLock.unlock();
         }
 
-        connection.flush();
+        connection.flush(); // 将数据从用户缓冲区发送到内核缓冲区
     }
 
     @Override public String toString() {

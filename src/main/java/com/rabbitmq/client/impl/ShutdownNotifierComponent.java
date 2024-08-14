@@ -97,7 +97,7 @@ public class ShutdownNotifierComponent implements ShutdownNotifier {
     }
 
     /**
-     * Internal: this is the means of registering shutdown.
+     * Internal: this is the means of registering shutdown.  设置一下connection 或者 channel 被关闭标识，其他地方读取shutdownCause
      * @param sse the reason for the shutdown
      * @return <code>true</code> if the component is open; <code>false</code> otherwise.
      */

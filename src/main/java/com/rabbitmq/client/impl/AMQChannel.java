@@ -480,7 +480,7 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
             _channelLock.unlock();
         }
     }
-
+    // 安静传输
     public void quiescingTransmit(Method m) throws IOException {
         _channelLock.lock();
         try {
@@ -495,7 +495,7 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
         try {
             if (c.getMethod().hasContent()) { // 如果当前要传输的指令有内容，需要加锁等待其他的发送完成
                 while (_blockContent) {
-                    try { // ？
+                    try { // ？？？？
                         _channelLockCondition.await();
                     } catch (InterruptedException ignored) {
                         Thread.currentThread().interrupt();
@@ -504,7 +504,7 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
                     // This is to catch a situation when the thread wakes up during
                     // shutdown. Currently, no command that has content is allowed
                     // to send anything in a closing state.
-                    ensureIsOpen();
+                    ensureIsOpen(); // 唤醒后还需要校验一下当前连接是否已经关闭
                 }
             }
             this._trafficListener.write(c);   // 流控

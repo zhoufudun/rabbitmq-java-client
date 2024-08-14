@@ -45,7 +45,7 @@ public abstract class AMQContentHeader implements ContentHeader {
     
 
     private void writeTo(DataOutputStream out, long bodySize) throws IOException {
-        out.writeShort(0); // weight - not currently used
+        out.writeShort(0); // weight - not currently used 目前没用
         out.writeLong(bodySize);
         writePropertiesTo(new ContentHeaderPropertyWriter(out));
     }
@@ -74,7 +74,7 @@ public abstract class AMQContentHeader implements ContentHeader {
     public Frame toFrame(int channelNumber, long bodySize) throws IOException {
         Frame frame = new Frame(AMQP.FRAME_HEADER, channelNumber);
         DataOutputStream bodyOut = frame.getOutputStream();
-        bodyOut.writeShort(getClassId());
+        bodyOut.writeShort(getClassId()); // 类ID=60
         writeTo(bodyOut, bodySize);
         return frame;
     }

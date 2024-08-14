@@ -81,7 +81,7 @@ public class ChannelManager {
             // for the channel number
             channelMax = (1 << 16) - 1;
         }
-        _channelMax = channelMax;
+        _channelMax = channelMax; // 2047
         channelNumberAllocator = new IntAllocator(1, channelMax);
 
         this.workService = workService;

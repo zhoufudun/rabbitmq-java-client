@@ -117,7 +117,7 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
 
         this.connectionRecoveryTriggeringCondition = params.getConnectionRecoveryTriggeringCondition() == null ?
                 DEFAULT_CONNECTION_RECOVERY_TRIGGERING_CONDITION : params.getConnectionRecoveryTriggeringCondition();
-
+        // 系统写入数据时设置一个错误监听器，以便在发生错误时进行错误捕获和处理，并可能执行某种恢复操作
         setupErrorOnWriteListenerForPotentialRecovery();
 
         this.channels = new ConcurrentHashMap<>();
