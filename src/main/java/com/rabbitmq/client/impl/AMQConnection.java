@@ -155,7 +155,7 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
     private final SaslConfig saslConfig;
     private final int requestedHeartbeat; // 60
     private final int requestedChannelMax; // 2047
-    private final int requestedFrameMax;
+    private final int requestedFrameMax; // 0
     private final int handshakeTimeout; // 1000
     private final int shutdownTimeout; // 1000
     private final CredentialsProvider credentialsProvider;
@@ -321,6 +321,20 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
      * calls Connection.Open and waits for the OpenOk. Sets heart-beat
      * and frame max values after tuning has taken place.
      *
+     *
+     * 顺序
+     * 1、客户端开启消费者线程池
+     * 2、客户端发送心跳给服务端
+     * 3、客户端发送消息头给服务端
+     * 4、客户端等待服务端的消息：Start
+     * 5、客户端收到Start后回复StartOK
+     * 6、客户端等待服务端的Tune消息
+     * 7、客户端收到tune消息后向服务端回复tuneOK
+     * 8、客户端向服务端服务端的open消息
+     * 9、客户端发送open后等待服务端的openok
+     * 10、客户端收到openok后，连接完成建立
+     *
+     *
      * @throws IOException if an error is encountered
      *                     either before, or during, protocol negotiation;
      *                     sub-classes {@link ProtocolVersionMismatchException} and
@@ -409,7 +423,7 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
                 try { // serverResponse=#method<connection.tune>(channel-max=2047, frame-max=131072, heartbeat=60)
                     Method serverResponse = _channel0.rpc(method, handshakeTimeout / 2).getMethod();
                     if (serverResponse instanceof AMQP.Connection.Tune) {
-                        connTune = (AMQP.Connection.Tune) serverResponse;
+                        connTune = (AMQP.Connection.Tune) serverResponse; // 正常来说，服务端返回Tune请求
                     } else {
                         challenge = ((AMQP.Connection.Secure) serverResponse).getChallenge();
                         response = sm.handleChallenge(challenge, username, password);
@@ -444,10 +458,10 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
 
             _channelManager = instantiateChannelManager(negotiatedChannelMax, threadFactory);
 
-            int frameMax = negotiatedMaxValue(this.requestedFrameMax, connTune.getFrameMax());
-            this._frameMax = frameMax;
+            int frameMax = negotiatedMaxValue(this.requestedFrameMax, connTune.getFrameMax()); // 131072=1024*128b=128kb
+            this._frameMax = frameMax; // 131072=1024*128b=128kb
 
-            int negotiatedHeartbeat = negotiatedMaxValue(this.requestedHeartbeat, connTune.getHeartbeat());
+            int negotiatedHeartbeat = negotiatedMaxValue(this.requestedHeartbeat, connTune.getHeartbeat()); // 60s
 
             if (!checkUnsignedShort(negotiatedHeartbeat)) {
                 throw new IllegalArgumentException("Negotiated heartbeat must be between 0 and " + MAX_UNSIGNED_SHORT + ": " + negotiatedHeartbeat);
@@ -461,11 +475,12 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
                     .channelMax(negotiatedChannelMax)
                     .frameMax(frameMax)
                     .heartbeat(negotiatedHeartbeat)
-                    .build());
+                    .build()); // 向服务端发送一个TuneOk结果
             _channel0.exnWrappingRpc(new AMQP.Connection.Open.Builder()
                     .virtualHost(_virtualHost)
-                    .build());
+                    .build()); // 向服务端发送一个Open请求，服务端会回复OpenOK
         } catch (IOException ioe) {
+            System.out.println(ioe);
             _heartbeatSender.shutdown();
             _frameHandler.close();
             throw ioe;
@@ -516,7 +531,7 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
 
     protected void configureChannelManager(ChannelManager channelManager) {
         channelManager.setShutdownExecutor(this.shutdownExecutor);
-        channelManager.setChannelShutdownTimeout((int) ((requestedHeartbeat * CHANNEL_SHUTDOWN_TIMEOUT_MULTIPLIER) * 1000));
+        channelManager.setChannelShutdownTimeout((int) ((requestedHeartbeat * CHANNEL_SHUTDOWN_TIMEOUT_MULTIPLIER) * 1000)); // 60 * 1.05 * 1000ms
     }
 
     /**
@@ -574,7 +589,7 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
      * Protected API - set the heartbeat timeout. Should only be called
      * during tuning.
      */
-    public void setHeartbeat(int heartbeat) {
+    public void setHeartbeat(int heartbeat) { // 60
         try {
             _heartbeatSender.setHeartbeat(heartbeat);
             _heartbeat = heartbeat;
@@ -684,7 +699,7 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
         }
     }
 
-    private static int negotiatedMaxValue(int clientValue, int serverValue) {
+    private static int negotiatedMaxValue(int clientValue, int serverValue) { // 2047,2047
         return (clientValue == 0 || serverValue == 0) ?
                 Math.max(clientValue, serverValue) :
                 Math.min(clientValue, serverValue);
@@ -1282,8 +1297,8 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
         private final int peerPort;
 
         private DefaultConnectionInfo(String peerAddress, int peerPort) {
-            this.peerAddress = peerAddress;
-            this.peerPort = peerPort;
+            this.peerAddress = peerAddress;// 对端的地址：0:0:0:0:0:0:0:1
+            this.peerPort = peerPort; //对端的port：5672
         }
 
         @Override

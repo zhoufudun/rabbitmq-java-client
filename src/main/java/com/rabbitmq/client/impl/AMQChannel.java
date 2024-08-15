@@ -89,7 +89,7 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
     /**
      * Timeout for RPC calls
      */
-    final int _rpcTimeout;
+    final int _rpcTimeout; //60s
 
     private final boolean _checkRpcResponseType;
 
@@ -480,6 +480,7 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
             _channelLock.unlock();
         }
     }
+
     // 安静传输
     public void quiescingTransmit(Method m) throws IOException {
         _channelLock.lock();
@@ -490,6 +491,7 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
         }
     }
 
+    // 指令发送给服务端
     public void quiescingTransmit(AMQCommand c) throws IOException {
         _channelLock.lock();
         try {

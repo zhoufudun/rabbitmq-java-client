@@ -70,7 +70,7 @@ final class HeartbeatSender {
                 return;
             }
 
-            // cancel any existing heartbeat task
+            // cancel any existing heartbeat task 有心跳存在，取消后，创建一个新的
             if(this.future != null) {
                 this.future.cancel(true);
                 this.future = null;
@@ -81,7 +81,7 @@ final class HeartbeatSender {
                 // where the last activity comes just after the last heartbeat
                 long interval = SECONDS.toNanos(heartbeatSeconds) / 2;
                 ScheduledExecutorService executor = createExecutorIfNecessary();
-                Runnable task = new HeartbeatRunnable(interval);
+                Runnable task = new HeartbeatRunnable(interval); // 开启客户端的心跳线程
                 this.future = executor.scheduleAtFixedRate(
                     task, interval, interval, TimeUnit.NANOSECONDS);
             }

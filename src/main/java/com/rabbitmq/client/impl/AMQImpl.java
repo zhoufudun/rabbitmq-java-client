@@ -431,11 +431,11 @@ public class AMQImpl implements AMQP {
             }
 
             public int getFrameMax() {
-                return frameMax;
+                return frameMax; // 131017
             }
 
             public int getHeartbeat() {
-                return heartbeat;
+                return heartbeat; // 60
             }
 
             public Tune(int channelMax, int frameMax, int heartbeat) {
@@ -601,9 +601,9 @@ public class AMQImpl implements AMQP {
 
             public void writeArgumentsTo(MethodArgumentWriter writer)
                     throws IOException {
-                writer.writeShort(this.channelMax);
-                writer.writeLong(this.frameMax);
-                writer.writeShort(this.heartbeat);
+                writer.writeShort(this.channelMax); // 2047
+                writer.writeLong(this.frameMax); /// 131072
+                writer.writeShort(this.heartbeat); // 60
             }
         }
 

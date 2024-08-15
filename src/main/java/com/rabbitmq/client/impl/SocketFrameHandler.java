@@ -43,7 +43,7 @@ public class SocketFrameHandler implements FrameHandler {
     /**
      * The underlying socket
      */
-    private final Socket _socket;
+    private final Socket _socket; //Socket[addr=localhost/0:0:0:0:0:0:0:1,port=5672,localport=59757]
 
     /**
      * Optional {@link ExecutorService} for final flush.
