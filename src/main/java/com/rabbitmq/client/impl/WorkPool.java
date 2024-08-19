@@ -75,6 +75,7 @@ public class WorkPool<K, W> {
     /** The pool of registered clients, with their work queues. */
     private final Map<K, VariableLinkedBlockingQueue<W>> pool = new HashMap<K, VariableLinkedBlockingQueue<W>>();
     /** Those keys which want limits to be removed. We do not limit queue size if this is non-empty. */
+    // 那些希望移除限制的键。如果这个集合非空，我们将不限制队列大小
     private final Set<K> unlimited = new HashSet<K>();
     private final BiConsumer<VariableLinkedBlockingQueue<W>, W> enqueueingCallback;
 
@@ -104,14 +105,14 @@ public class WorkPool<K, W> {
     /**
      * Add client <code><b>key</b></code> to pool of item queues, with an empty queue.
      * A client is initially <i>dormant</i>.
-     * No-op if <code><b>key</b></code> already present.
+     * No-op if <code><b>key</b></code> already present.  将客户端key添加到项队列池中，并初始化为空队列。客户端初始状态为休眠。如果key已经存在，则不进行操作
      * @param key client to add to pool
      */
     public void registerKey(K key) {
         synchronized (this) {
             if (!this.pool.containsKey(key)) {
                 int initialCapacity = unlimited.isEmpty() ? MAX_QUEUE_LENGTH : Integer.MAX_VALUE;
-                this.pool.put(key, new VariableLinkedBlockingQueue<W>(initialCapacity));
+                this.pool.put(key, new VariableLinkedBlockingQueue<W>(initialCapacity)); // 每个AMQChannel对应一个VariableLinkedBlockingQueue
             }
         }
     }

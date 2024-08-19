@@ -105,17 +105,17 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
      * @param channelNumber the allocated reference number for this channel
      */
     public AMQChannel(AMQConnection connection, int channelNumber) {
-        this._connection = connection;
-        this._channelNumber = channelNumber;
+        this._connection = connection; //AMQConnection
+        this._channelNumber = channelNumber; // 唯一编号，单经常顺序递增
         if (connection.getChannelRpcTimeout() < 0) {
             throw new IllegalArgumentException("Continuation timeout on RPC calls cannot be less than 0");
         }
-        this._rpcTimeout = connection.getChannelRpcTimeout();
-        this._checkRpcResponseType = connection.willCheckRpcResponseType();
+        this._rpcTimeout = connection.getChannelRpcTimeout(); //60s
+        this._checkRpcResponseType = connection.willCheckRpcResponseType();//false
         this._trafficListener = connection.getTrafficListener();
-        this.maxInboundMessageBodySize = connection.getMaxInboundMessageBodySize();
+        this.maxInboundMessageBodySize = connection.getMaxInboundMessageBodySize();// 67108864
         this._command = new AMQCommand(this.maxInboundMessageBodySize);
-        this.connectionInfo = connection.connectionInfo();
+        this.connectionInfo = connection.connectionInfo(); // DefaultConnectionInfo：
     }
 
     /**
@@ -322,7 +322,7 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
         } else {
             try {
                 return k.getReply(_rpcTimeout);
-            } catch (TimeoutException e) {
+            } catch (TimeoutException e) { // 等待服务端的应答结果超时
                 throw wrapTimeoutException(m, e);
             }
         }

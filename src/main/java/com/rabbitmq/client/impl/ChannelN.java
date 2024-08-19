@@ -56,7 +56,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
      * from the connection's reader thread. We go to some pains to
      * ensure this is the case - see the use of
      * BlockingRpcContinuation to inject code into the reader thread
-     * in basicConsume and basicCancel.
+     * in basicConsume and basicCancel. “从消费者标签到消费者实例的映射“。请注意，一般情况下，这个映射只能从连接的读取线程中访问。我们为确保这一点做了一些努力——请参阅在 basicConsume 和 basicCancel 中使用 BlockingRpcContinuation 将代码注入读取线程的方式。”
      */
     private final Map<String, Consumer> _consumers =
             Collections.synchronizedMap(new HashMap<String, Consumer>());
@@ -71,7 +71,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
      */
     private final Collection<ConfirmListener> confirmListeners = new CopyOnWriteArrayList<ConfirmListener>();
 
-    /**
+    /**下一个需要确认的已发布消息的序列号。
      * Sequence number of next published message requiring confirmation.
      */
     private long nextPublishSeqNo = 0L;
@@ -81,7 +81,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
      */
     private volatile Consumer defaultConsumer = null;
 
-    /**
+    /**为此通道分配消费者任务的调度器。
      * Dispatcher of consumer work for this channel
      */
     private final ConsumerDispatcher dispatcher;
@@ -93,7 +93,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
 
     /**
      * Set of currently unconfirmed messages (i.e. messages that have
-     * not been ack'd or nack'd by the server yet.
+     * not been ack'd or nack'd by the server yet. 当前未确认的消息集（即尚未被服务器确认或否认的消息）。
      */
     private final SortedSet<Long> unconfirmedSet =
             Collections.synchronizedSortedSet(new TreeSet<Long>());
@@ -103,7 +103,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
      */
     private boolean confirmSelectActivated = false;
 
-    /**
+    /**“自上次 waitForConfirms() 以来是否接收到任何 nack。
      * Whether any nacks have been received since the last waitForConfirms().
      */
     private volatile boolean onlyAcksReceived = true;
@@ -154,7 +154,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
      * @throws IOException if any problem is encountered
      */
     public void open() throws IOException {
-        // wait for the Channel.OpenOk response, and ignore it
+        // wait for the Channel.OpenOk response, and ignore it 向服务端发送open，客户端等待openok应答
         exnWrappingRpc(new Channel.Open(UNSPECIFIED_OUT_OF_BAND));
     }
 
@@ -1044,7 +1044,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
                 .build()));
     }
 
-    /**
+    /** 服务端返回DeclareOk消息
      * Public API - {@inheritDoc}
      */
     @Override

@@ -71,7 +71,7 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
     private static final Logger LOGGER = LoggerFactory.getLogger(AutorecoveringConnection.class);
 
     private final RecoveryAwareAMQConnectionFactory cf;
-    private final Map<Integer, AutorecoveringChannel> channels;
+    private final Map<Integer, AutorecoveringChannel> channels; // key=channelN，value=AutorecoveringChannel
     private final ConnectionParams params;
     private volatile RecoveryAwareAMQConnection delegate;
 
@@ -199,7 +199,7 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
      * Creates a recovering channel from a regular channel and registers it.
      * If the regular channel cannot be created (e.g. too many channels are open
      * already), returns null.
-     *
+     * 从常规通道创建一个恢复通道并注册它。如果无法创建常规通道（例如，已经打开的通道过多），则返回 null
      * @param delegateChannel Channel to wrap.
      * @return Recovering channel.
      */
@@ -534,7 +534,7 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
             newConn.addRecoveryCanBeginListener(starter);
         }
     }
-
+    // 判断是否触发恢复连接
     protected boolean shouldTriggerConnectionRecovery(ShutdownSignalException cause) {
         return connectionRecoveryTriggeringCondition.test(cause);
     }

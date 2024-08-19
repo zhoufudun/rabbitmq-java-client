@@ -77,7 +77,7 @@ public class BlockingCell<T> {
         if (!_filled)
             throw new TimeoutException();
 
-        return _value;
+        return _value; // {#method<connection.open-ok>(known-hosts=), null, ""}
     }
 
     /**

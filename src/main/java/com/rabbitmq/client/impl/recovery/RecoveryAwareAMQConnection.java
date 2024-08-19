@@ -23,7 +23,7 @@ import com.rabbitmq.client.observation.ObservationCollector;
 
 import java.util.concurrent.ThreadFactory;
 
-/**
+/** 使用 RecoveryAwareChannelN 的 AMQConnection 修改
  * {@link com.rabbitmq.client.impl.AMQConnection} modification that uses {@link com.rabbitmq.client.impl.recovery.RecoveryAwareChannelN}
  * @since 3.3.0
  */

@@ -63,8 +63,7 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
     private ThreadFactory threadFactory = Executors.defaultThreadFactory();
     private String id;
 
-    private final List<RecoveryCanBeginListener> recoveryCanBeginListeners =
-            Collections.synchronizedList(new ArrayList<>());
+    private final List<RecoveryCanBeginListener> recoveryCanBeginListeners = Collections.synchronizedList(new ArrayList<>());
 
     private final ErrorOnWriteListener errorOnWriteListener;
 
@@ -320,8 +319,8 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
      * Connection.Start/.StartOk, Connection.Tune/.TuneOk, and then
      * calls Connection.Open and waits for the OpenOk. Sets heart-beat
      * and frame max values after tuning has taken place.
-     *
-     *
+     * <p>
+     * <p>
      * 顺序
      * 1、客户端开启消费者线程池
      * 2、客户端发送心跳给服务端
@@ -333,7 +332,6 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
      * 8、客户端向服务端服务端的open消息
      * 9、客户端发送open后等待服务端的openok
      * 10、客户端收到openok后，连接完成建立
-     *
      *
      * @throws IOException if an error is encountered
      *                     either before, or during, protocol negotiation;
@@ -476,9 +474,8 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
                     .frameMax(frameMax)
                     .heartbeat(negotiatedHeartbeat)
                     .build()); // 向服务端发送一个TuneOk结果
-            _channel0.exnWrappingRpc(new AMQP.Connection.Open.Builder()
-                    .virtualHost(_virtualHost)
-                    .build()); // 向服务端发送一个Open请求，服务端会回复OpenOK
+            // 向服务端发送一个Open请求，服务端会回复OpenOK
+            _channel0.exnWrappingRpc(new AMQP.Connection.Open.Builder().virtualHost(_virtualHost).build());
         } catch (IOException ioe) {
             System.out.println(ioe);
             _heartbeatSender.shutdown();
@@ -489,6 +486,7 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
             _frameHandler.close();
             throw AMQChannel.wrap(sse);
         }
+        // 连接完成建立，并且初始化完成
 
         if (this.credentialsProvider.getTimeBeforeExpiration() != null) {
             String registrationId = this.credentialsRefreshService.register(credentialsProvider, () -> {
@@ -513,12 +511,12 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
                 }
                 return true;
             });
-
+            // 注册监听器，用于服务端停止时，移除token刷新定时任务
             addShutdownListener(sse -> this.credentialsRefreshService.unregister(this.credentialsProvider, registrationId));
         }
 
         // We can now respond to errors having finished tailoring the connection
-        this._inConnectionNegotiation = false;
+        this._inConnectionNegotiation = false; // 设置标志位，表示连接协商阶段结束
     }
 
     protected ChannelManager instantiateChannelManager(int channelMax, ThreadFactory threadFactory) {
@@ -1048,6 +1046,7 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
         finishShutdown(sse);
         return sse;
     }
+
     // 关闭消费者
     private ShutdownSignalException startShutdown(Method reason,
                                                   boolean initiatedByApplication,

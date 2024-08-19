@@ -177,7 +177,7 @@ public class ChannelManager {
     }
 
     public ChannelN createChannel(AMQConnection connection) throws IOException {
-        ChannelN ch;
+        ChannelN ch; // RecoveryAwareChannelN
         synchronized (this.monitor) {
             int channelNumber = channelNumberAllocator.allocate();
             if (channelNumber == -1) {
@@ -213,7 +213,7 @@ public class ChannelManager {
                     + "use. This should never happen. "
                     + "Please report this as a bug.");
         }
-        ChannelN ch = instantiateChannel(connection, channelNumber, this.workService);
+        ChannelN ch = instantiateChannel(connection, channelNumber, this.workService); // ch：RecoveryAwareChannelN
         _channelMap.put(ch.getChannelNumber(), ch);
         return ch;
     }

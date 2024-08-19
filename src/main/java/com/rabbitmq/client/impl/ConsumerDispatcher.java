@@ -26,7 +26,7 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
-/**
+/** 通过内部管理的执行器服务和工作池将通知分发给消费者。每个通道都有一个单独的 ConsumerDispatcher，但执行器服务和工作池可能与其他通道共享，通常是与同一个 AMQConnection 上的其他通道共享。
  * Dispatches notifications to a {@link Consumer} on an internally-managed executor service and work
  * pool.
  * <p/>

@@ -158,19 +158,20 @@ public class DefaultCredentialsRefreshService implements CredentialsRefreshServi
             credentialsProviderState.refresh();
 
             Duration timeBeforeExpiration = credentialsProviderState.credentialsProvider.getTimeBeforeExpiration();
-            Duration newDelay = refreshDelayStrategy.apply(timeBeforeExpiration);
+            Duration newDelay = refreshDelayStrategy.apply(timeBeforeExpiration); // 下次过期时间间隔
 
             LOGGER.debug("Scheduling refresh in {} seconds", newDelay.getSeconds());
 
             ScheduledFuture<?> scheduledFuture = scheduler.schedule(
                     refresh(scheduler, credentialsProviderState, refreshDelayStrategy),
-                    newDelay.getSeconds(),
+                    newDelay.getSeconds(), // 下次过期时间发起请求
                     TimeUnit.SECONDS
             );
             credentialsProviderState.refreshTask.set(scheduledFuture);
         };
     }
 
+    // 定时向服务端发起认证消息
     @Override
     public String register(CredentialsProvider credentialsProvider, Callable<Boolean> refreshAction) {
         String registrationId = UUID.randomUUID().toString();

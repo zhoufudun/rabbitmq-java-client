@@ -38,17 +38,17 @@ public class AutorecoveringChannel implements RecoverableChannel {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AutorecoveringChannel.class);
 
-    private volatile RecoveryAwareChannelN delegate;
-    private volatile AutorecoveringConnection connection;
+    private volatile RecoveryAwareChannelN delegate; //AMQChannel(amqp://guest@127.0.0.1:5672//zfdtest,1)
+    private volatile AutorecoveringConnection connection; //amqp://guest@127.0.0.1:5672//zfdtest
     private final List<ShutdownListener> shutdownHooks  = new CopyOnWriteArrayList<>();
     private final List<RecoveryListener> recoveryListeners = new CopyOnWriteArrayList<>();
-    private final List<ReturnListener> returnListeners = new CopyOnWriteArrayList<>();
-    private final List<ConfirmListener> confirmListeners = new CopyOnWriteArrayList<>();
+    private final List<ReturnListener> returnListeners = new CopyOnWriteArrayList<>(); // 返回值监听器列表
+    private final List<ConfirmListener> confirmListeners = new CopyOnWriteArrayList<>(); // 确认监听器列表
     private final Set<String> consumerTags = Collections.synchronizedSet(new HashSet<>());
-    private int prefetchCountConsumer;
-    private int prefetchCountGlobal;
-    private boolean usesPublisherConfirms;
-    private boolean usesTransactions;
+    private int prefetchCountConsumer; // ？？
+    private int prefetchCountGlobal; // ？？
+    private boolean usesPublisherConfirms; // ？？
+    private boolean usesTransactions; // ？？
 
     public AutorecoveringChannel(AutorecoveringConnection connection, RecoveryAwareChannelN delegate) {
         this.connection = connection;
