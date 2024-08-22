@@ -344,7 +344,7 @@ public class AutorecoveringChannel implements RecoverableChannel {
 
     @Override
     public AMQP.Queue.DeclareOk queueDeclare(String queue, boolean durable, boolean exclusive, boolean autoDelete, Map<String, Object> arguments) throws IOException {
-        final AMQP.Queue.DeclareOk ok = delegate.queueDeclare(queue, durable, exclusive, autoDelete, arguments);
+        final AMQP.Queue.DeclareOk ok = delegate.queueDeclare(queue, durable, exclusive, autoDelete, arguments); //#method<queue.declare-ok>(queue=hello, message-count=1, consumer-count=0)
         recordQueue(ok, queue, durable, exclusive, autoDelete, arguments);
         return ok;
     }

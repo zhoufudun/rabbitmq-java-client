@@ -42,10 +42,14 @@ public class BrokerTestCase {
 
     protected ConnectionFactory newConnectionFactory() {
         ConnectionFactory connectionFactory = TestUtils.connectionFactory();
-        if(TestUtils.USE_NIO) {
+        if (TestUtils.USE_NIO) {
             connectionFactory.setNioParams(nioParams());
         }
         connectionFactory.setAutomaticRecoveryEnabled(isAutomaticRecoveryEnabled());
+        connectionFactory.setVirtualHost("/zfdtest");
+        connectionFactory.setUsername("guest");
+        connectionFactory.setPassword("guest");
+        connectionFactory.setHost("localhost");
         return connectionFactory;
     }
 
@@ -73,9 +77,10 @@ public class BrokerTestCase {
         createResources();
     }
 
-    @AfterEach public void tearDown(TestInfo testInfo)
+    @AfterEach
+    public void tearDown(TestInfo testInfo)
             throws IOException, TimeoutException {
-        if(shouldRun()) {
+        if (shouldRun()) {
             closeChannel();
             closeConnection();
 
@@ -91,6 +96,7 @@ public class BrokerTestCase {
      * Whether to run the test or not.
      * Subclasses can check whether some broker features
      * are available or not, and choose not to run the test.
+     *
      * @return
      */
     protected boolean shouldRun() throws IOException {
@@ -241,7 +247,7 @@ public class BrokerTestCase {
     }
 
     public void basicPublishVolatile(byte[] msg, String x, String routingKey,
-                                        AMQP.BasicProperties properties) throws IOException {
+                                     AMQP.BasicProperties properties) throws IOException {
         channel.basicPublish(x, routingKey, properties, msg);
     }
 
@@ -282,7 +288,7 @@ public class BrokerTestCase {
         channel.exchangeDelete(x);
     }
 
-    protected void deleteExchanges(String [] exchanges) throws IOException {
+    protected void deleteExchanges(String[] exchanges) throws IOException {
         if (exchanges != null) {
             for (String exchange : exchanges) {
                 deleteExchange(exchange);
@@ -294,7 +300,7 @@ public class BrokerTestCase {
         channel.queueDelete(q);
     }
 
-    protected void deleteQueues(String [] queues) throws IOException {
+    protected void deleteQueues(String[] queues) throws IOException {
         if (queues != null) {
             for (String queue : queues) {
                 deleteQueue(queue);
@@ -327,25 +333,24 @@ public class BrokerTestCase {
 
     protected String generateQueueName() {
         return name("queue", this.testInfo.getTestClass().get(),
-            this.testInfo.getTestMethod().get().getName());
+                this.testInfo.getTestMethod().get().getName());
     }
 
     protected String generateExchangeName() {
         return name("exchange", this.testInfo.getTestClass().get(),
-            this.testInfo.getTestMethod().get().getName());
+                this.testInfo.getTestMethod().get().getName());
     }
 
     private static String name(String prefix, Class<?> testClass, String testMethodName) {
         String uuid = UUID.randomUUID().toString();
         return String.format(
-            "%s_%s_%s%s",
-            prefix, testClass.getSimpleName(), testMethodName, uuid.substring(uuid.length() / 2));
+                "%s_%s_%s%s",
+                prefix, testClass.getSimpleName(), testMethodName, uuid.substring(uuid.length() / 2));
     }
 
     protected boolean beforeMessageContainers() {
-       return versionCompare(this.brokerVersion, "3.13.0") < 0;
+        return versionCompare(this.brokerVersion, "3.13.0") < 0;
     }
-
 
 
 }

@@ -15,8 +15,10 @@
 
 package com.rabbitmq.client.test;
 
+import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.ReturnListener;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -46,9 +48,10 @@ public class LambdaCallbackTest extends BrokerTestCase {
         }
     }
 
-    @Test public void shutdownListener() throws Exception {
+    @Test
+    public void shutdownListener() throws Exception {
         CountDownLatch latch = new CountDownLatch(2);
-        try(Connection connection = TestUtils.connectionFactory().newConnection()) {
+        try (Connection connection = TestUtils.connectionFactory().newConnection()) {
             connection.addShutdownListener(cause -> latch.countDown());
             Channel channel = connection.createChannel();
             channel.addShutdownListener(cause -> latch.countDown());
@@ -56,36 +59,46 @@ public class LambdaCallbackTest extends BrokerTestCase {
         assertTrue(latch.await(1, TimeUnit.SECONDS), "Connection closed, shutdown listeners should have been called");
     }
 
-    @Test public void confirmListener() throws Exception {
+    @Test
+    public void confirmListener() throws Exception {
         channel.confirmSelect();
         CountDownLatch latch = new CountDownLatch(1);
         channel.addConfirmListener(
-            (deliveryTag, multiple) -> latch.countDown(),
-            (deliveryTag, multiple) -> {}
+                (deliveryTag, multiple) -> latch.countDown(),
+                (deliveryTag, multiple) -> {
+                }
         );
         channel.basicPublish("", "whatever", null, "dummy".getBytes());
         assertTrue(latch.await(1, TimeUnit.SECONDS), "Should have received publisher confirm");
     }
 
-    @Test public void returnListener() throws Exception {
+    @Test
+    public void returnListener() throws Exception {
         CountDownLatch latch = new CountDownLatch(1);
-        channel.addReturnListener(returnMessage -> latch.countDown());
+        channel.addReturnListener(new ReturnListener() {
+            @Override
+            public void handleReturn(int replyCode, String replyText, String exchange, String routingKey, AMQP.BasicProperties properties, byte[] body) throws IOException {
+                System.out.println("========"+Thread.currentThread().getName());
+                latch.countDown();
+            }
+        });
         channel.basicPublish("", "notlikelytoexist", true, null, "dummy".getBytes());
         assertTrue(latch.await(1, TimeUnit.SECONDS), "Should have received returned message");
     }
 
-    @Test public void blockedListener() throws Exception {
+    @Test
+    public void blockedListener() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
-        try(Connection connection = TestUtils.connectionFactory().newConnection()) {
+        try (Connection connection = TestUtils.connectionFactory().newConnection()) {
             connection.addBlockedListener(
-                reason -> {
-                    try {
-                        unblock();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-            },
-                () -> latch.countDown()
+                    reason -> {
+                        try {
+                            unblock();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    },
+                    () -> latch.countDown()
             );
             block();
             Channel ch = connection.createChannel();
@@ -94,14 +107,15 @@ public class LambdaCallbackTest extends BrokerTestCase {
         }
     }
 
-    @Test public void basicConsumeDeliverCancel() throws Exception {
-        try(Connection connection = TestUtils.connectionFactory().newConnection()) {
+    @Test
+    public void basicConsumeDeliverCancel() throws Exception {
+        try (Connection connection = TestUtils.connectionFactory().newConnection()) {
             final CountDownLatch consumingLatch = new CountDownLatch(1);
             final CountDownLatch cancelLatch = new CountDownLatch(1);
             Channel consumingChannel = connection.createChannel();
             consumingChannel.basicConsume(queue, true,
-                (consumerTag, delivery) -> consumingLatch.countDown(),
-                consumerTag -> cancelLatch.countDown()
+                    (consumerTag, delivery) -> consumingLatch.countDown(),
+                    consumerTag -> cancelLatch.countDown()
             );
             this.channel.basicPublish("", queue, null, "dummy".getBytes());
             assertTrue(consumingLatch.await(1, TimeUnit.SECONDS), "deliver callback should have been called");
@@ -110,14 +124,15 @@ public class LambdaCallbackTest extends BrokerTestCase {
         }
     }
 
-    @Test public void basicConsumeDeliverShutdown() throws Exception {
+    @Test
+    public void basicConsumeDeliverShutdown() throws Exception {
         final CountDownLatch shutdownLatch = new CountDownLatch(1);
-        try(Connection connection = TestUtils.connectionFactory().newConnection()) {
+        try (Connection connection = TestUtils.connectionFactory().newConnection()) {
             final CountDownLatch consumingLatch = new CountDownLatch(1);
             Channel consumingChannel = connection.createChannel();
             consumingChannel.basicConsume(queue, true,
-                (consumerTag, delivery) -> consumingLatch.countDown(),
-                (consumerTag, sig) -> shutdownLatch.countDown()
+                    (consumerTag, delivery) -> consumingLatch.countDown(),
+                    (consumerTag, sig) -> shutdownLatch.countDown()
             );
             this.channel.basicPublish("", queue, null, "dummy".getBytes());
             assertTrue(consumingLatch.await(1, TimeUnit.SECONDS), "deliver callback should have been called");
@@ -125,17 +140,19 @@ public class LambdaCallbackTest extends BrokerTestCase {
         assertTrue(shutdownLatch.await(1, TimeUnit.SECONDS), "shutdown callback should have been called");
     }
 
-    @Test public void basicConsumeCancelDeliverShutdown() throws Exception {
+    @Test
+    public void basicConsumeCancelDeliverShutdown() throws Exception {
         final CountDownLatch shutdownLatch = new CountDownLatch(1);
-        try(Connection connection = TestUtils.connectionFactory().newConnection()) {
+        try (Connection connection = TestUtils.connectionFactory().newConnection()) {
             final CountDownLatch consumingLatch = new CountDownLatch(1);
             Channel consumingChannel = connection.createChannel();
             // not both cancel and shutdown callback can be called on the same consumer
             // testing just shutdown
             consumingChannel.basicConsume(queue, true,
-                (consumerTag, delivery) -> consumingLatch.countDown(),
-                (consumerTag) -> { },
-                (consumerTag, sig) -> shutdownLatch.countDown()
+                    (consumerTag, delivery) -> consumingLatch.countDown(),
+                    (consumerTag) -> {
+                    },
+                    (consumerTag, sig) -> shutdownLatch.countDown()
             );
             this.channel.basicPublish("", queue, null, "dummy".getBytes());
             assertTrue(consumingLatch.await(1, TimeUnit.SECONDS), "deliver callback should have been called");

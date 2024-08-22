@@ -470,7 +470,7 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
             _channelLock.unlock();
         }
     }
-
+    // c={#method<basic.publish>(ticket=0, exchange=, routing-key=hello, mandatory=false, immediate=false), #contentHeader<basic>(content-type=null, content-encoding=null, headers=null, delivery-mode=null, priority=null, correlation-id=null, reply-to=null, expiration=null, message-id=null, timestamp=null, type=null, user-id=null, app-id=null, cluster-id=null), "Hello World!"}
     public void transmit(AMQCommand c) throws IOException {
         _channelLock.lock();
         try {

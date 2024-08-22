@@ -20,6 +20,7 @@ import java.util.Map;
 
 /**
  * @since 3.3.0
+ * 一个queue
  */
 public class RecordedQueue extends RecordedNamedEntity {
     public static final String EMPTY_STRING = "";

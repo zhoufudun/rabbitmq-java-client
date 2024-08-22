@@ -1,14 +1,13 @@
 package com.rabbitmq.client.rabbitmq.tutorials;
 
-import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.Connection;
-import com.rabbitmq.client.ConnectionFactory;
+import com.rabbitmq.client.*;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 public class Send {
 
-    private final static String QUEUE_NAME = "hello";
+    private final static String QUEUE_NAME = Worker.TASK_QUEUE_NAME;
 
     public static void main(String[] argv) throws Exception {
         ConnectionFactory factory = new ConnectionFactory();
@@ -18,8 +17,18 @@ public class Send {
         factory.setHost("localhost");
         try (Connection connection = factory.newConnection()) {
             try (Channel channel = connection.createChannel()) {
-                channel.queueDeclare(QUEUE_NAME, false, false, false, null);
+                channel.queueDeclare(QUEUE_NAME, true, false, false, null);
                 String message = "Hello World!";
+                channel.addReturnListener(new ReturnListener() {
+                    @Override
+                    public void handleReturn(int replyCode, String replyText, String exchange, String routingKey, AMQP.BasicProperties properties, byte[] body) throws IOException {
+                        System.out.println("replyCode="+replyCode);
+                        System.out.println("replyText="+replyText);
+                        System.out.println("exchange="+exchange);
+                        System.out.println("routingKey="+routingKey);
+                        System.out.println("properties="+properties);
+                    }
+                });
                 channel.basicPublish("", QUEUE_NAME, null, message.getBytes(StandardCharsets.UTF_8));
                 System.out.println(" [x] Sent '" + message + "'");
             }

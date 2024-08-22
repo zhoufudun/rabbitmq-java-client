@@ -25,22 +25,31 @@ import java.net.SocketTimeoutException;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+
 import static java.lang.String.format;
 
 /**
  * Represents an AMQP wire-protocol frame, with frame type, channel number, and payload bytes.
  */
 public class Frame {
-    /** Frame type code */
+    /**
+     * Frame type code
+     */
     private final int type;
 
-    /** Frame channel number, 0-65535 */
+    /**
+     * Frame channel number, 0-65535
+     */
     private final int channel;
 
-    /** Frame payload bytes (for inbound frames) */
+    /**
+     * Frame payload bytes (for inbound frames)
+     */
     private final byte[] payload;
 
-    /** Frame payload (for outbound frames) */
+    /**
+     * Frame payload (for outbound frames)
+     */
     private final ByteArrayOutputStream accumulator;
 
     private static final int NON_BODY_SIZE = 1 /* type */ + 2 /* channel */ + 4 /* payload size */ + 1 /* end character */;
@@ -68,8 +77,7 @@ public class Frame {
     }
 
     public static Frame fromBodyFragment(int channelNumber, byte[] body, int offset, int length)
-        throws IOException
-    {
+            throws IOException {
         Frame frame = new Frame(AMQP.FRAME_BODY, channelNumber);
         DataOutputStream bodyOut = frame.getOutputStream();
         bodyOut.write(body, offset, length);
@@ -110,10 +118,10 @@ public class Frame {
         int payloadSize = is.readInt();
         if (payloadSize >= maxPayloadSize) {
             throw new IllegalStateException(format(
-                "Frame body is too large (%d), maximum configured size is %d. " +
-                    "See ConnectionFactory#setMaxInboundMessageBodySize " +
-                    "if you need to increase the limit.",
-                payloadSize, maxPayloadSize
+                    "Frame body is too large (%d), maximum configured size is %d. " +
+                            "See ConnectionFactory#setMaxInboundMessageBodySize " +
+                            "if you need to increase the limit.",
+                    payloadSize, maxPayloadSize
             ));
         }
         byte[] payload = new byte[payloadSize];
@@ -134,21 +142,19 @@ public class Frame {
      * likely the broker is trying to tell us we are speaking the wrong AMQP
      * protocol version.
      *
-     * @throws MalformedFrameException
-     *                 if an AMQP protocol version mismatch is detected
-     * @throws MalformedFrameException
-     *                 if a corrupt AMQP protocol identifier is read
+     * @throws MalformedFrameException if an AMQP protocol version mismatch is detected
+     * @throws MalformedFrameException if a corrupt AMQP protocol identifier is read
      */
     public static void protocolVersionMismatch(DataInputStream is) throws IOException {
         MalformedFrameException x;
 
         // We expect the letters M, Q, P in that order: generate an informative error if they're not found
-        byte[] expectedBytes = new byte[] { 'M', 'Q', 'P' };
+        byte[] expectedBytes = new byte[]{'M', 'Q', 'P'};
         for (byte expectedByte : expectedBytes) {
             int nextByte = is.readUnsignedByte();
             if (nextByte != expectedByte) {
                 throw new MalformedFrameException("Invalid AMQP protocol header from server: expected character " +
-                    expectedByte + ", got " + nextByte);
+                        expectedByte + ", got " + nextByte);
             }
         }
 
@@ -160,14 +166,13 @@ public class Frame {
             }
 
             if (signature[0] == 1 &&
-                signature[1] == 1 &&
-                signature[2] == 8 &&
-                signature[3] == 0) {
+                    signature[1] == 1 &&
+                    signature[2] == 8 &&
+                    signature[3] == 0) {
                 x = new MalformedFrameException("AMQP protocol version mismatch; we are version " +
                         AMQP.PROTOCOL.MAJOR + "-" + AMQP.PROTOCOL.MINOR + "-" + AMQP.PROTOCOL.REVISION +
                         ", server is 0-8");
-            }
-            else {
+            } else {
                 String sig = "";
                 for (int i = 0; i < 4; i++) {
                     if (i != 0) sig += ",";
@@ -202,7 +207,7 @@ public class Frame {
     }
 
     public int size() {
-        if(accumulator != null) {
+        if (accumulator != null) {
             return accumulator.size() + NON_BODY_SIZE;
         } else {
             return payload.length + NON_BODY_SIZE;
@@ -235,7 +240,8 @@ public class Frame {
         return new DataOutputStream(accumulator);
     }
 
-    @Override public String toString() {
+    @Override
+    public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("Frame(type=").append(type).append(", channel=").append(channel).append(", ");
         if (accumulator == null) {
@@ -246,83 +252,69 @@ public class Frame {
         return sb.toString();
     }
 
-    /** Computes the AMQP wire-protocol length of protocol-encoded table entries.
+    /**
+     * Computes the AMQP wire-protocol length of protocol-encoded table entries.
      */
     public static long tableSize(Map<String, Object> table)
-        throws UnsupportedEncodingException
-    {
+            throws UnsupportedEncodingException {
         long acc = 0;
-        for(Map.Entry<String, Object> entry: table.entrySet()) {
+        for (Map.Entry<String, Object> entry : table.entrySet()) {
             acc += shortStrSize(entry.getKey());
             acc += fieldValueSize(entry.getValue());
         }
         return acc;
     }
 
-    /** Computes the AMQP wire-protocol length of a protocol-encoded field-value. */
+    /**
+     * Computes the AMQP wire-protocol length of a protocol-encoded field-value.
+     */
     private static long fieldValueSize(Object value)
-        throws UnsupportedEncodingException
-    {
+            throws UnsupportedEncodingException {
         long acc = 1; // for the type tag
-        if(value instanceof String) {
-            acc += longStrSize((String)value);
-        }
-        else if(value instanceof LongString) {
-            acc += 4 + ((LongString)value).length();
-        }
-        else if(value instanceof Integer) {
+        if (value instanceof String) {
+            acc += longStrSize((String) value);
+        } else if (value instanceof LongString) {
+            acc += 4 + ((LongString) value).length();
+        } else if (value instanceof Integer) {
             acc += 4;
-        }
-        else if(value instanceof BigDecimal) {
+        } else if (value instanceof BigDecimal) {
             acc += 5;
-        }
-        else if(value instanceof Date) {
+        } else if (value instanceof Date) {
             acc += 8;
-        }
-        else if(value instanceof Map) {
+        } else if (value instanceof Map) {
             @SuppressWarnings("unchecked")
-            Map<String,Object> map = (Map<String,Object>) value;
+            Map<String, Object> map = (Map<String, Object>) value;
             acc += 4 + tableSize(map);
-        }
-        else if (value instanceof Byte) {
+        } else if (value instanceof Byte) {
             acc += 1;
-        }
-        else if(value instanceof Double) {
+        } else if (value instanceof Double) {
             acc += 8;
-        }
-        else if(value instanceof Float) {
+        } else if (value instanceof Float) {
             acc += 4;
-        }
-        else if(value instanceof Long) {
+        } else if (value instanceof Long) {
             acc += 8;
-        }
-        else if(value instanceof Short) {
+        } else if (value instanceof Short) {
             acc += 2;
-        }
-        else if(value instanceof Boolean) {
+        } else if (value instanceof Boolean) {
             acc += 1;
-        }
-        else if(value instanceof byte[]) {
-            acc += 4 + ((byte[])value).length;
-        }
-        else if(value instanceof List) {
-            acc += 4 + arraySize((List<?>)value);
-        }
-        else if(value instanceof Object[]) {
-            acc += 4 + arraySize((Object[])value);
-        }
-        else if(value == null) {
-        }
-        else {
+        } else if (value instanceof byte[]) {
+            acc += 4 + ((byte[]) value).length;
+        } else if (value instanceof List) {
+            acc += 4 + arraySize((List<?>) value);
+        } else if (value instanceof Object[]) {
+            acc += 4 + arraySize((Object[]) value);
+        } else if (value == null) {
+        } else {
             throw new IllegalArgumentException("invalid value in table");
         }
         return acc;
     }
 
-    /** Computes the AMQP 0-9-1 wire-protocol length of an encoded field-array of type List */
+    /**
+     * Computes the AMQP 0-9-1 wire-protocol length of an encoded field-array of type List
+     */
     public static long arraySize(List<?> values)
-        throws UnsupportedEncodingException
-    {
+            throws UnsupportedEncodingException {
         long acc = 0;
         for (Object value : values) {
             acc += fieldValueSize(value);
@@ -330,7 +322,9 @@ public class Frame {
         return acc;
     }
 
-    /** Computes the AMQP wire-protocol length of an encoded field-array of type Object[] */
+    /**
+     * Computes the AMQP wire-protocol length of an encoded field-array of type Object[]
+     */
     public static long arraySize(Object[] values) throws UnsupportedEncodingException {
         long acc = 0;
         for (Object value : values) {
@@ -339,17 +333,19 @@ public class Frame {
         return acc;
     }
 
-    /** Computes the AMQP wire-protocol length of a protocol-encoded long string. */
+    /**
+     * Computes the AMQP wire-protocol length of a protocol-encoded long string.
+     */
     private static int longStrSize(String str)
-        throws UnsupportedEncodingException
-    {
+            throws UnsupportedEncodingException {
         return str.getBytes("utf-8").length + 4;
     }
 
-    /** Computes the AMQP wire-protocol length of a protocol-encoded short string. */
+    /**
+     * Computes the AMQP wire-protocol length of a protocol-encoded short string.
+     */
     private static int shortStrSize(String str)
-        throws UnsupportedEncodingException
-    {
+            throws UnsupportedEncodingException {
         return str.getBytes("utf-8").length + 1;
     }
 
