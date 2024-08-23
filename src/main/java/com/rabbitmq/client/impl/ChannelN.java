@@ -71,7 +71,8 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
      */
     private final Collection<ConfirmListener> confirmListeners = new CopyOnWriteArrayList<ConfirmListener>();
 
-    /**下一个需要确认的已发布消息的序列号。
+    /**
+     * 下一个需要确认的已发布消息的序列号。
      * Sequence number of next published message requiring confirmation.
      */
     private long nextPublishSeqNo = 0L;
@@ -81,7 +82,8 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
      */
     private volatile Consumer defaultConsumer = null;
 
-    /**为此通道分配消费者任务的调度器。
+    /**
+     * 为此通道分配消费者任务的调度器。
      * Dispatcher of consumer work for this channel
      */
     private final ConsumerDispatcher dispatcher;
@@ -103,7 +105,8 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
      */
     private boolean confirmSelectActivated = false;
 
-    /**“自上次 waitForConfirms() 以来是否接收到任何 nack。
+    /**
+     * “自上次 waitForConfirms() 以来是否接收到任何 nack。
      * Whether any nacks have been received since the last waitForConfirms().
      */
     private volatile boolean onlyAcksReceived = true;
@@ -374,7 +377,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
         // decision to close this channel, and we are to discard all
         // incoming commands except for a close and close-ok.
 
-        Method method = command.getMethod();
+        Method method = command.getMethod(); // 举例： #method<basic.return>(reply-code=312, reply-text=NO_ROUTE, exchange=, routing-key=notlikelytoexist)
         // we deal with channel.close in the same way, regardless
         if (method instanceof Channel.Close) {
             asyncShutdown(command);
@@ -387,10 +390,10 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
             if (method instanceof Basic.Deliver) {
                 processDelivery(command, (Basic.Deliver) method);
                 return true;
-            } else if (method instanceof Basic.Return) {
+            } else if (method instanceof Basic.Return) { // 服务端的返回Return信息，此时需要回调客户端的监听器
                 callReturnListeners(command, (Basic.Return) method);
                 return true;
-            } else if (method instanceof Channel.Flow) {
+            } else if (method instanceof Channel.Flow) { // ？？
                 Channel.Flow channelFlow = (Channel.Flow) method;
                 _channelLock.lock();
                 try {
@@ -528,7 +531,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
         }
     }
 
-    private void callConfirmListeners(@SuppressWarnings("unused") Command command, Basic.Ack ack) {
+    private void callConfirmListeners(@SuppressWarnings("unused") Command command, Basic.Ack ack) { // ack=#method<basic.ack>(delivery-tag=1, multiple=false)
         try {
             for (ConfirmListener l : this.confirmListeners) {
                 l.handleAck(ack.getDeliveryTag(), ack.getMultiple());
@@ -1044,7 +1047,8 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
                 .build()));
     }
 
-    /** 服务端返回DeclareOk消息
+    /**
+     * 服务端返回DeclareOk消息
      * Public API - {@inheritDoc}
      */
     @Override
@@ -1776,7 +1780,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
         if (multiple) {
             unconfirmedSet.headSet(seqNo + 1).clear();
         } else {
-            unconfirmedSet.remove(seqNo);
+            unconfirmedSet.remove(seqNo); // 收到了确认消息，将从未确认消息队列移除
         }
         synchronized (unconfirmedSet) {
             onlyAcksReceived = onlyAcksReceived && !nack;

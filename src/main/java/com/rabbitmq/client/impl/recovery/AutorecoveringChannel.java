@@ -40,7 +40,7 @@ public class AutorecoveringChannel implements RecoverableChannel {
 
     private volatile RecoveryAwareChannelN delegate; //AMQChannel(amqp://guest@127.0.0.1:5672//zfdtest,1)
     private volatile AutorecoveringConnection connection; //amqp://guest@127.0.0.1:5672//zfdtest
-    private final List<ShutdownListener> shutdownHooks  = new CopyOnWriteArrayList<>();
+    private final List<ShutdownListener> shutdownHooks = new CopyOnWriteArrayList<>();
     private final List<RecoveryListener> recoveryListeners = new CopyOnWriteArrayList<>();
     private final List<ReturnListener> returnListeners = new CopyOnWriteArrayList<>(); // 返回值监听器列表
     private final List<ConfirmListener> confirmListeners = new CopyOnWriteArrayList<>(); // 确认监听器列表
@@ -121,7 +121,7 @@ public class AutorecoveringChannel implements RecoverableChannel {
     @Override
     public ReturnListener addReturnListener(ReturnCallback returnCallback) {
         ReturnListener returnListener = (replyCode, replyText, exchange, routingKey, properties, body) -> returnCallback.handle(new Return(
-            replyCode, replyText, exchange, routingKey, properties, body
+                replyCode, replyText, exchange, routingKey, properties, body
         ));
         this.addReturnListener(returnListener);
         return returnListener;
@@ -266,10 +266,10 @@ public class AutorecoveringChannel implements RecoverableChannel {
     @Override
     public void exchangeDeclareNoWait(String exchange, String type, boolean durable, boolean autoDelete, boolean internal, Map<String, Object> arguments) throws IOException {
         RecordedExchange x = new RecordedExchange(this, exchange).
-          type(type).
-          durable(durable).
-          autoDelete(autoDelete).
-          arguments(arguments);
+                type(type).
+                durable(durable).
+                autoDelete(autoDelete).
+                arguments(arguments);
         recordExchange(exchange, x);
         delegate.exchangeDeclareNoWait(exchange, type, durable, autoDelete, internal, arguments);
     }
@@ -356,11 +356,11 @@ public class AutorecoveringChannel implements RecoverableChannel {
                                    boolean autoDelete,
                                    Map<String, Object> arguments) throws IOException {
         RecordedQueue meta = new RecordedQueue(this, queue).
-            durable(durable).
-            exclusive(exclusive).
-            autoDelete(autoDelete).
-            arguments(arguments).
-            recoveredQueueNameSupplier(connection.getRecoveredQueueNameSupplier());
+                durable(durable).
+                exclusive(exclusive).
+                autoDelete(autoDelete).
+                arguments(arguments).
+                recoveredQueueNameSupplier(connection.getRecoveredQueueNameSupplier());
         delegate.queueDeclareNoWait(queue, durable, exclusive, autoDelete, arguments);
         recordQueue(queue, meta);
 
@@ -470,7 +470,7 @@ public class AutorecoveringChannel implements RecoverableChannel {
 
     @Override
     public String basicConsume(String queue, DeliverCallback deliverCallback, CancelCallback cancelCallback,
-        ConsumerShutdownSignalCallback shutdownSignalCallback) throws IOException {
+                               ConsumerShutdownSignalCallback shutdownSignalCallback) throws IOException {
         return basicConsume(queue, false, consumerFromDeliverCancelShutdownCallbacks(deliverCallback, cancelCallback, shutdownSignalCallback));
     }
 
@@ -486,13 +486,13 @@ public class AutorecoveringChannel implements RecoverableChannel {
 
     @Override
     public String basicConsume(String queue, boolean autoAck, DeliverCallback deliverCallback, ConsumerShutdownSignalCallback shutdownSignalCallback)
-        throws IOException {
+            throws IOException {
         return basicConsume(queue, autoAck, "", consumerFromDeliverShutdownCallbacks(deliverCallback, shutdownSignalCallback));
     }
 
     @Override
     public String basicConsume(String queue, boolean autoAck, DeliverCallback deliverCallback, CancelCallback cancelCallback,
-        ConsumerShutdownSignalCallback shutdownSignalCallback) throws IOException {
+                               ConsumerShutdownSignalCallback shutdownSignalCallback) throws IOException {
         return basicConsume(queue, autoAck, "", consumerFromDeliverCancelShutdownCallbacks(deliverCallback, cancelCallback, shutdownSignalCallback));
     }
 
@@ -503,19 +503,19 @@ public class AutorecoveringChannel implements RecoverableChannel {
 
     @Override
     public String basicConsume(String queue, boolean autoAck, String consumerTag, DeliverCallback deliverCallback, CancelCallback cancelCallback)
-        throws IOException {
+            throws IOException {
         return basicConsume(queue, autoAck, consumerTag, false, false, null, consumerFromDeliverCancelCallbacks(deliverCallback, cancelCallback));
     }
 
     @Override
     public String basicConsume(String queue, boolean autoAck, String consumerTag, DeliverCallback deliverCallback,
-        ConsumerShutdownSignalCallback shutdownSignalCallback) throws IOException {
+                               ConsumerShutdownSignalCallback shutdownSignalCallback) throws IOException {
         return basicConsume(queue, autoAck, consumerTag, false, false, null, consumerFromDeliverShutdownCallbacks(deliverCallback, shutdownSignalCallback));
     }
 
     @Override
     public String basicConsume(String queue, boolean autoAck, String consumerTag, DeliverCallback deliverCallback, CancelCallback cancelCallback,
-        ConsumerShutdownSignalCallback shutdownSignalCallback) throws IOException {
+                               ConsumerShutdownSignalCallback shutdownSignalCallback) throws IOException {
         return basicConsume(queue, autoAck, consumerTag, false, false, null, consumerFromDeliverCancelShutdownCallbacks(deliverCallback, cancelCallback, shutdownSignalCallback));
     }
 
@@ -526,19 +526,19 @@ public class AutorecoveringChannel implements RecoverableChannel {
 
     @Override
     public String basicConsume(String queue, boolean autoAck, Map<String, Object> arguments, DeliverCallback deliverCallback, CancelCallback cancelCallback)
-        throws IOException {
+            throws IOException {
         return basicConsume(queue, autoAck, "", false, false, arguments, consumerFromDeliverCancelCallbacks(deliverCallback, cancelCallback));
     }
 
     @Override
     public String basicConsume(String queue, boolean autoAck, Map<String, Object> arguments, DeliverCallback deliverCallback,
-        ConsumerShutdownSignalCallback shutdownSignalCallback) throws IOException {
+                               ConsumerShutdownSignalCallback shutdownSignalCallback) throws IOException {
         return basicConsume(queue, autoAck, "", false, false, arguments, consumerFromDeliverShutdownCallbacks(deliverCallback, shutdownSignalCallback));
     }
 
     @Override
     public String basicConsume(String queue, boolean autoAck, Map<String, Object> arguments, DeliverCallback deliverCallback, CancelCallback cancelCallback,
-        ConsumerShutdownSignalCallback shutdownSignalCallback) throws IOException {
+                               ConsumerShutdownSignalCallback shutdownSignalCallback) throws IOException {
         return basicConsume(queue, autoAck, "", false, false, arguments, consumerFromDeliverCancelShutdownCallbacks(deliverCallback, cancelCallback, shutdownSignalCallback));
     }
 
@@ -551,19 +551,19 @@ public class AutorecoveringChannel implements RecoverableChannel {
 
     @Override
     public String basicConsume(String queue, boolean autoAck, String consumerTag, boolean noLocal, boolean exclusive, Map<String, Object> arguments,
-        DeliverCallback deliverCallback, CancelCallback cancelCallback) throws IOException {
+                               DeliverCallback deliverCallback, CancelCallback cancelCallback) throws IOException {
         return basicConsume(queue, autoAck, consumerTag, noLocal, exclusive, arguments, consumerFromDeliverCancelCallbacks(deliverCallback, cancelCallback));
     }
 
     @Override
     public String basicConsume(String queue, boolean autoAck, String consumerTag, boolean noLocal, boolean exclusive, Map<String, Object> arguments,
-        DeliverCallback deliverCallback, ConsumerShutdownSignalCallback shutdownSignalCallback) throws IOException {
+                               DeliverCallback deliverCallback, ConsumerShutdownSignalCallback shutdownSignalCallback) throws IOException {
         return basicConsume(queue, autoAck, consumerTag, noLocal, exclusive, arguments, consumerFromDeliverShutdownCallbacks(deliverCallback, shutdownSignalCallback));
     }
 
     @Override
     public String basicConsume(String queue, boolean autoAck, String consumerTag, boolean noLocal, boolean exclusive, Map<String, Object> arguments,
-        DeliverCallback deliverCallback, CancelCallback cancelCallback, ConsumerShutdownSignalCallback shutdownSignalCallback) throws IOException {
+                               DeliverCallback deliverCallback, CancelCallback cancelCallback, ConsumerShutdownSignalCallback shutdownSignalCallback) throws IOException {
         return basicConsume(queue, autoAck, consumerTag, noLocal, exclusive, arguments, consumerFromDeliverCancelShutdownCallbacks(deliverCallback, cancelCallback, shutdownSignalCallback));
     }
 
@@ -571,10 +571,12 @@ public class AutorecoveringChannel implements RecoverableChannel {
         return new Consumer() {
 
             @Override
-            public void handleConsumeOk(String consumerTag) { }
+            public void handleConsumeOk(String consumerTag) {
+            }
 
             @Override
-            public void handleCancelOk(String consumerTag) { }
+            public void handleCancelOk(String consumerTag) {
+            }
 
             @Override
             public void handleCancel(String consumerTag) throws IOException {
@@ -582,10 +584,12 @@ public class AutorecoveringChannel implements RecoverableChannel {
             }
 
             @Override
-            public void handleShutdownSignal(String consumerTag, ShutdownSignalException sig) { }
+            public void handleShutdownSignal(String consumerTag, ShutdownSignalException sig) {
+            }
 
             @Override
-            public void handleRecoverOk(String consumerTag) { }
+            public void handleRecoverOk(String consumerTag) {
+            }
 
             @Override
             public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
@@ -597,13 +601,16 @@ public class AutorecoveringChannel implements RecoverableChannel {
     private Consumer consumerFromDeliverShutdownCallbacks(final DeliverCallback deliverCallback, final ConsumerShutdownSignalCallback shutdownSignalCallback) {
         return new Consumer() {
             @Override
-            public void handleConsumeOk(String consumerTag) { }
+            public void handleConsumeOk(String consumerTag) {
+            }
 
             @Override
-            public void handleCancelOk(String consumerTag) { }
+            public void handleCancelOk(String consumerTag) {
+            }
 
             @Override
-            public void handleCancel(String consumerTag) throws IOException { }
+            public void handleCancel(String consumerTag) throws IOException {
+            }
 
             @Override
             public void handleShutdownSignal(String consumerTag, ShutdownSignalException sig) {
@@ -611,7 +618,8 @@ public class AutorecoveringChannel implements RecoverableChannel {
             }
 
             @Override
-            public void handleRecoverOk(String consumerTag) { }
+            public void handleRecoverOk(String consumerTag) {
+            }
 
             @Override
             public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
@@ -623,10 +631,12 @@ public class AutorecoveringChannel implements RecoverableChannel {
     private Consumer consumerFromDeliverCancelShutdownCallbacks(final DeliverCallback deliverCallback, final CancelCallback cancelCallback, final ConsumerShutdownSignalCallback shutdownSignalCallback) {
         return new Consumer() {
             @Override
-            public void handleConsumeOk(String consumerTag) { }
+            public void handleConsumeOk(String consumerTag) {
+            }
 
             @Override
-            public void handleCancelOk(String consumerTag) { }
+            public void handleCancelOk(String consumerTag) {
+            }
 
             @Override
             public void handleCancel(String consumerTag) throws IOException {
@@ -639,7 +649,8 @@ public class AutorecoveringChannel implements RecoverableChannel {
             }
 
             @Override
-            public void handleRecoverOk(String consumerTag) { }
+            public void handleRecoverOk(String consumerTag) {
+            }
 
             @Override
             public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
@@ -794,13 +805,13 @@ public class AutorecoveringChannel implements RecoverableChannel {
     }
 
     private void recoverReturnListeners() {
-        for(ReturnListener rl : this.returnListeners) {
+        for (ReturnListener rl : this.returnListeners) {
             this.delegate.addReturnListener(rl);
         }
     }
 
     private void recoverConfirmListeners() {
-        for(ConfirmListener cl : this.confirmListeners) {
+        for (ConfirmListener cl : this.confirmListeners) {
             this.delegate.addConfirmListener(cl);
         }
     }
@@ -812,10 +823,10 @@ public class AutorecoveringChannel implements RecoverableChannel {
         if (this.prefetchCountGlobal != 0) {
             basicQos(this.prefetchCountGlobal, true);
         }
-        if(this.usesPublisherConfirms) {
+        if (this.usesPublisherConfirms) {
             this.confirmSelect();
         }
-        if(this.usesTransactions) {
+        if (this.usesTransactions) {
             this.txSelect();
         }
     }
@@ -897,17 +908,18 @@ public class AutorecoveringChannel implements RecoverableChannel {
                                 Map<String, Object> arguments,
                                 Consumer callback) {
         RecordedConsumer consumer = new RecordedConsumer(this, queue).
-                                            autoAck(autoAck).
-                                            consumerTag(result).
-                                            exclusive(exclusive).
-                                            arguments(arguments).
-                                            consumer(callback);
+                autoAck(autoAck).
+                consumerTag(result).
+                exclusive(exclusive).
+                arguments(arguments).
+                consumer(callback);
         this.consumerTags.add(result);
         this.connection.recordConsumer(result, consumer);
     }
 
     /**
      * Delete the recorded consumer from this channel and accompanying connection
+     *
      * @param consumerTag consumer tag to delete
      */
     public void deleteRecordedConsumer(String consumerTag) {

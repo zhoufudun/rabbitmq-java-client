@@ -15,10 +15,7 @@
 
 package com.rabbitmq.client.test;
 
-import com.rabbitmq.client.AMQP;
-import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.Connection;
-import com.rabbitmq.client.ReturnListener;
+import com.rabbitmq.client.*;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -48,37 +45,56 @@ public class LambdaCallbackTest extends BrokerTestCase {
         }
     }
 
+    // read
     @Test
     public void shutdownListener() throws Exception {
         CountDownLatch latch = new CountDownLatch(2);
-        try (Connection connection = TestUtils.connectionFactory().newConnection()) {
-            connection.addShutdownListener(cause -> latch.countDown());
+        try (Connection connection = newConnectionFactory().newConnection()) {
+            connection.addShutdownListener(cause -> {
+                System.out.println("connection shutdownListener execute");
+                latch.countDown();
+            });
             Channel channel = connection.createChannel();
-            channel.addShutdownListener(cause -> latch.countDown());
+            channel.addShutdownListener(cause -> {
+                System.out.println("channel shutdownListener execute");
+                latch.countDown();
+            });
         }
         assertTrue(latch.await(1, TimeUnit.SECONDS), "Connection closed, shutdown listeners should have been called");
     }
 
+    // read
     @Test
     public void confirmListener() throws Exception {
         channel.confirmSelect();
         CountDownLatch latch = new CountDownLatch(1);
         channel.addConfirmListener(
-                (deliveryTag, multiple) -> latch.countDown(),
-                (deliveryTag, multiple) -> {
+                new ConfirmCallback() {
+                    @Override
+                    public void handle(long deliveryTag, boolean multiple) throws IOException {
+                        System.out.println("ack");
+                        latch.countDown();
+                    }
+                },
+                new ConfirmCallback() {
+                    @Override
+                    public void handle(long deliveryTag, boolean multiple) throws IOException {
+                        System.out.println("nack");
+                    }
                 }
         );
         channel.basicPublish("", "whatever", null, "dummy".getBytes());
         assertTrue(latch.await(1, TimeUnit.SECONDS), "Should have received publisher confirm");
     }
 
+    // read
     @Test
     public void returnListener() throws Exception {
         CountDownLatch latch = new CountDownLatch(1);
         channel.addReturnListener(new ReturnListener() {
             @Override
             public void handleReturn(int replyCode, String replyText, String exchange, String routingKey, AMQP.BasicProperties properties, byte[] body) throws IOException {
-                System.out.println("========"+Thread.currentThread().getName());
+                System.out.println("========" + Thread.currentThread().getName());
                 latch.countDown();
             }
         });
@@ -86,13 +102,15 @@ public class LambdaCallbackTest extends BrokerTestCase {
         assertTrue(latch.await(1, TimeUnit.SECONDS), "Should have received returned message");
     }
 
+    // 没看明白
     @Test
     public void blockedListener() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
-        try (Connection connection = TestUtils.connectionFactory().newConnection()) {
+        try (Connection connection = newConnectionFactory().newConnection()) {
             connection.addBlockedListener(
                     reason -> {
                         try {
+                            System.out.println("blockedListener callback");
                             unblock();
                         } catch (InterruptedException e) {
                             e.printStackTrace();
@@ -109,13 +127,23 @@ public class LambdaCallbackTest extends BrokerTestCase {
 
     @Test
     public void basicConsumeDeliverCancel() throws Exception {
-        try (Connection connection = TestUtils.connectionFactory().newConnection()) {
+        try (Connection connection = newConnectionFactory().newConnection()) {
             final CountDownLatch consumingLatch = new CountDownLatch(1);
             final CountDownLatch cancelLatch = new CountDownLatch(1);
             Channel consumingChannel = connection.createChannel();
             consumingChannel.basicConsume(queue, true,
-                    (consumerTag, delivery) -> consumingLatch.countDown(),
-                    consumerTag -> cancelLatch.countDown()
+                    new DeliverCallback() {
+                        @Override
+                        public void handle(String consumerTag, Delivery delivery) throws IOException {
+                            consumingLatch.countDown();
+                        }
+                    },
+                    new CancelCallback() {
+                        @Override
+                        public void handle(String consumerTag) throws IOException {
+                            cancelLatch.countDown();
+                        }
+                    }
             );
             this.channel.basicPublish("", queue, null, "dummy".getBytes());
             assertTrue(consumingLatch.await(1, TimeUnit.SECONDS), "deliver callback should have been called");

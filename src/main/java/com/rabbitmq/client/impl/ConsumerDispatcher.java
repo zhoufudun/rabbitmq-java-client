@@ -26,7 +26,8 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
-/** 通过内部管理的执行器服务和工作池将通知分发给消费者。每个通道都有一个单独的 ConsumerDispatcher，但执行器服务和工作池可能与其他通道共享，通常是与同一个 AMQConnection 上的其他通道共享。
+/**
+ * 通过内部管理的执行器服务和工作池将通知分发给消费者。每个通道都有一个单独的 ConsumerDispatcher，但执行器服务和工作池可能与其他通道共享，通常是与同一个 AMQConnection 上的其他通道共享。
  * Dispatches notifications to a {@link Consumer} on an internally-managed executor service and work
  * pool.
  * <p/>
@@ -56,7 +57,9 @@ final class ConsumerDispatcher {
         this.workService = workService;
     }
 
-    /** Prepare for shutdown of all consumers on this channel */
+    /**
+     * Prepare for shutdown of all consumers on this channel
+     */
     public void quiesce() {
         // Prevent any more items being put on the queue (except the shutdown item)
         this.shuttingDown = true;
@@ -69,71 +72,71 @@ final class ConsumerDispatcher {
     public void handleConsumeOk(final Consumer delegate,
                                 final String consumerTag) {
         executeUnlessShuttingDown(
-        new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    delegate.handleConsumeOk(consumerTag);
-                } catch (Throwable ex) {
-                    connection.getExceptionHandler().handleConsumerException(
-                            channel,
-                            ex,
-                            delegate,
-                            consumerTag,
-                            "handleConsumeOk");
-                }
-            }
-        });
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            delegate.handleConsumeOk(consumerTag);
+                        } catch (Throwable ex) {
+                            connection.getExceptionHandler().handleConsumerException(
+                                    channel,
+                                    ex,
+                                    delegate,
+                                    consumerTag,
+                                    "handleConsumeOk");
+                        }
+                    }
+                });
     }
 
     public void handleCancelOk(final Consumer delegate,
                                final String consumerTag) {
         executeUnlessShuttingDown(
-        new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    delegate.handleCancelOk(consumerTag);
-                } catch (Throwable ex) {
-                    connection.getExceptionHandler().handleConsumerException(
-                            channel,
-                            ex,
-                            delegate,
-                            consumerTag,
-                            "handleCancelOk");
-                }
-            }
-        });
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            delegate.handleCancelOk(consumerTag);
+                        } catch (Throwable ex) {
+                            connection.getExceptionHandler().handleConsumerException(
+                                    channel,
+                                    ex,
+                                    delegate,
+                                    consumerTag,
+                                    "handleCancelOk");
+                        }
+                    }
+                });
     }
 
     public void handleCancel(final Consumer delegate, final String consumerTag) {
         executeUnlessShuttingDown(
-        new Runnable() {
-      @Override
-    public void run() {
-                try {
-                    delegate.handleCancel(consumerTag);
-                } catch (Throwable ex) {
-                    connection.getExceptionHandler().handleConsumerException(
-                            channel,
-                            ex,
-                            delegate,
-                            consumerTag,
-                            "handleCancel");
-                }
-      }
-    });
-  }
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            delegate.handleCancel(consumerTag);
+                        } catch (Throwable ex) {
+                            connection.getExceptionHandler().handleConsumerException(
+                                    channel,
+                                    ex,
+                                    delegate,
+                                    consumerTag,
+                                    "handleCancel");
+                        }
+                    }
+                });
+    }
 
 
     public void handleRecoverOk(final Consumer delegate, final String consumerTag) {
         executeUnlessShuttingDown(
-        new Runnable() {
-            @Override
-            public void run() {
-                delegate.handleRecoverOk(consumerTag);
-            }
-        });
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        delegate.handleRecoverOk(consumerTag);
+                    }
+                });
     }
 
     public void handleDelivery(final Consumer delegate,
@@ -142,28 +145,28 @@ final class ConsumerDispatcher {
                                final AMQP.BasicProperties properties,
                                final byte[] body) throws IOException {
         executeUnlessShuttingDown(
-        new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    delegate.handleDelivery(consumerTag,
-                            envelope,
-                            properties,
-                            body);
-                } catch (Throwable ex) {
-                    connection.getExceptionHandler().handleConsumerException(
-                            channel,
-                            ex,
-                            delegate,
-                            consumerTag,
-                            "handleDelivery");
-                }
-            }
-        });
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            delegate.handleDelivery(consumerTag,
+                                    envelope,
+                                    properties,
+                                    body);
+                        } catch (Throwable ex) {
+                            connection.getExceptionHandler().handleConsumerException(
+                                    channel,
+                                    ex,
+                                    delegate,
+                                    consumerTag,
+                                    "handleDelivery");
+                        }
+                    }
+                });
     }
 
     public CountDownLatch handleShutdownSignal(final Map<String, Consumer> consumers,
-                                     final ShutdownSignalException signal) {
+                                               final ShutdownSignalException signal) {
         // ONLY CASE WHERE WE IGNORE shuttingDown
         if (!this.shutdownConsumersDriven) {
             final CountDownLatch latch = new CountDownLatch(1);

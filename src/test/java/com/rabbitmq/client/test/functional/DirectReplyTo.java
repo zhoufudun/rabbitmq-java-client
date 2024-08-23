@@ -34,7 +34,8 @@ import com.rabbitmq.client.test.BrokerTestCase;
 public class DirectReplyTo extends BrokerTestCase {
     private static final String QUEUE = "amq.rabbitmq.reply-to";
 
-    @Test public void roundTrip() throws IOException, InterruptedException {
+    @Test
+    public void roundTrip() throws IOException, InterruptedException {
         QueueMessageConsumer c = new QueueMessageConsumer(channel);
         String replyTo = rpcFirstHalf(c);
         declare(connection, replyTo, true);
@@ -46,7 +47,8 @@ public class DirectReplyTo extends BrokerTestCase {
         assertEquals("response", new String(body));
     }
 
-    @Test public void hack() throws IOException, InterruptedException {
+    @Test
+    public void hack() throws IOException, InterruptedException {
         QueueMessageConsumer c = new QueueMessageConsumer(channel);
         String replyTo = rpcFirstHalf(c);
         // 5 chars should overwrite part of the key but not the pid; aiming to prove
@@ -72,7 +74,8 @@ public class DirectReplyTo extends BrokerTestCase {
         }
     }
 
-    @Test public void consumeFail() throws IOException, InterruptedException {
+    @Test
+    public void consumeFail() throws IOException, InterruptedException {
         DefaultConsumer c = new DefaultConsumer(channel);
         Channel ch = connection.createChannel();
         try {
@@ -92,7 +95,8 @@ public class DirectReplyTo extends BrokerTestCase {
         }
     }
 
-    @Test public void consumeSuccess() throws IOException {
+    @Test
+    public void consumeSuccess() throws IOException {
         DefaultConsumer c = new DefaultConsumer(channel);
         String ctag = channel.basicConsume(QUEUE, true, c);
         channel.basicCancel(ctag);

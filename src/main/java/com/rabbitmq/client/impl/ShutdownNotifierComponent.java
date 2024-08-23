@@ -30,10 +30,14 @@ import com.rabbitmq.client.ShutdownSignalException;
  */
 public class ShutdownNotifierComponent implements ShutdownNotifier {
 
-    /** Monitor for shutdown listeners and shutdownCause */
+    /**
+     * Monitor for shutdown listeners and shutdownCause
+     */
     private final Object monitor = new Object();
 
-    /** List of all shutdown listeners associated with the component */
+    /**
+     * List of all shutdown listeners associated with the component
+     */
     private final List<ShutdownListener> shutdownListeners = new ArrayList<ShutdownListener>();
 
     /**
@@ -44,10 +48,9 @@ public class ShutdownNotifierComponent implements ShutdownNotifier {
     private volatile ShutdownSignalException shutdownCause = null;
 
     @Override
-    public void addShutdownListener(ShutdownListener listener)
-    {
+    public void addShutdownListener(ShutdownListener listener) {
         ShutdownSignalException sse = null;
-        synchronized(this.monitor) {
+        synchronized (this.monitor) {
             sse = this.shutdownCause;
             this.shutdownListeners.add(listener);
         }
@@ -57,47 +60,46 @@ public class ShutdownNotifierComponent implements ShutdownNotifier {
 
     @Override
     public ShutdownSignalException getCloseReason() {
-        synchronized(this.monitor) {
+        synchronized (this.monitor) {
             return this.shutdownCause;
         }
     }
 
     @Override
-    public void notifyListeners()
-    {
+    public void notifyListeners() {
         ShutdownSignalException sse = null;
         ShutdownListener[] sdls = null;
-        synchronized(this.monitor) {
+        synchronized (this.monitor) {
             sdls = this.shutdownListeners
-                .toArray(new ShutdownListener[this.shutdownListeners.size()]);
+                    .toArray(new ShutdownListener[this.shutdownListeners.size()]);
             sse = this.shutdownCause;
         }
-        for (ShutdownListener l: sdls) {
+        for (ShutdownListener l : sdls) {
             try {
                 l.shutdownCompleted(sse);
             } catch (Exception e) {
-            // FIXME: proper logging
+                // FIXME: proper logging
             }
         }
     }
 
     @Override
-    public void removeShutdownListener(ShutdownListener listener)
-    {
-        synchronized(this.monitor) {
+    public void removeShutdownListener(ShutdownListener listener) {
+        synchronized (this.monitor) {
             this.shutdownListeners.remove(listener);
         }
     }
 
     @Override
     public boolean isOpen() {
-        synchronized(this.monitor) {
+        synchronized (this.monitor) {
             return this.shutdownCause == null;
         }
     }
 
     /**
      * Internal: this is the means of registering shutdown.  设置一下connection 或者 channel 被关闭标识，其他地方读取shutdownCause
+     *
      * @param sse the reason for the shutdown
      * @return <code>true</code> if the component is open; <code>false</code> otherwise.
      */
