@@ -1047,7 +1047,7 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
         return sse;
     }
 
-    // 关闭消费者
+    // 关闭客户端
     private ShutdownSignalException startShutdown(Method reason,
                                                   boolean initiatedByApplication,
                                                   Throwable cause,
@@ -1178,7 +1178,7 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
                     new AMQP.Connection.Close.Builder()
                             .replyCode(closeCode)
                             .replyText(closeMessage)
-                            .build();
+                            .build(); // 构造主动关闭消息
 
             final ShutdownSignalException sse = startShutdown(reason, initiatedByApplication, cause, true);
             if (sync) {

@@ -135,6 +135,8 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
      * @throws IOException if an error is encountered
      */
     void handleFrame(Frame frame) throws IOException {
+        // {#method<basic.consume-ok>(consumer-tag=amq.ctag-DxNWmW1shY5YokYxEYZbrg), null, ""}
+        // 举例：{#method<basic.deliver>(consumer-tag=amq.ctag-YMiMwpt3eKoY3ecArDTfqg, delivery-tag=1, redelivered=false, exchange=, routing-key=test), #contentHeader<basic>(content-type=null, content-encoding=null, headers=null, delivery-mode=null, priority=null, correlation-id=null, reply-to=null, expiration=null, message-id=null, timestamp=null, type=null, user-id=null, app-id=null, cluster-id=null), "dummy"}
         AMQCommand command = _command;
         if (command.handleFrame(frame)) { // a complete command has rolled off the assembly line
             _command = new AMQCommand(this.maxInboundMessageBodySize); // prepare for the next one 重置，为下一个请求做准备
@@ -454,7 +456,7 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
                 notifyOutstandingRpc(signal);
         }
     }
-
+    // 通知正在等待应答的请求，关闭等待应答
     void notifyOutstandingRpc(ShutdownSignalException signal) {
         RpcWrapper k = nextOutstandingRpc();
         if (k != null) {
@@ -546,7 +548,7 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
         }
 
         @Override
-        public void handleCommand(AMQCommand command) {
+        public void handleCommand(AMQCommand command) { // {#method<basic.consume-ok>(consumer-tag=amq.ctag-_xxZamtgHcjRV-Ka0u_Q1Q), null, ""}
             _blocker.setValue(transformReply(command));
         }
 

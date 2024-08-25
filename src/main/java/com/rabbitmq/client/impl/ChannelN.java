@@ -57,9 +57,9 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
      * ensure this is the case - see the use of
      * BlockingRpcContinuation to inject code into the reader thread
      * in basicConsume and basicCancel. “从消费者标签到消费者实例的映射“。请注意，一般情况下，这个映射只能从连接的读取线程中访问。我们为确保这一点做了一些努力——请参阅在 basicConsume 和 basicCancel 中使用 BlockingRpcContinuation 将代码注入读取线程的方式。”
+     * key=consumerTag（可一个channel都有一个tag）， value=客户端的消费实例（封装具体的消费逻辑）
      */
-    private final Map<String, Consumer> _consumers =
-            Collections.synchronizedMap(new HashMap<String, Consumer>());
+    private final Map<String, Consumer> _consumers = Collections.synchronizedMap(new HashMap<String, Consumer>());
 
     /* All listeners collections are in CopyOnWriteArrayList objects */
     /**
@@ -83,7 +83,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
     private volatile Consumer defaultConsumer = null;
 
     /**
-     * 为此通道分配消费者任务的调度器。
+     * 为此通道分配消费者任务的调度器。 每一个消费者拥有一个ConsumerDispatcher
      * Dispatcher of consumer work for this channel
      */
     private final ConsumerDispatcher dispatcher;
@@ -366,7 +366,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
      * Protected API - Filters the inbound command stream, processing
      * Basic.Deliver, Basic.Return and Channel.Close specially.  If
      * we're in quiescing mode, all inbound commands are ignored,
-     * except for Channel.Close and Channel.CloseOk.
+     * except for Channel.Close and Channel.CloseOk.  收到如服务端的消息后会执行这个方法
      */
     @Override
     public boolean processAsync(Command command) throws IOException {
@@ -388,7 +388,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
             // We're in normal running mode.
 
             if (method instanceof Basic.Deliver) {
-                processDelivery(command, (Basic.Deliver) method);
+                processDelivery(command, (Basic.Deliver) method); // 服务端推送的客户端的订阅的消息
                 return true;
             } else if (method instanceof Basic.Return) { // 服务端的返回Return信息，此时需要回调客户端的监听器
                 callReturnListeners(command, (Basic.Return) method);
@@ -472,9 +472,9 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
     }
 
     protected void processDelivery(Command command, Basic.Deliver method) {
-        Basic.Deliver m = method;
+        Basic.Deliver m = method; // #method<basic.deliver>(consumer-tag=amq.ctag-mdxLAH8Y92wolZ5vb2JcPg, delivery-tag=1, redelivered=false, exchange=, routing-key=test)
 
-        Consumer callback = _consumers.get(m.getConsumerTag());
+        Consumer callback = _consumers.get(m.getConsumerTag()); // 通过唯一的消费者标签获取消费者对象
         if (callback == null) {
             if (defaultConsumer == null) {
                 // No handler set. We should blow up as this message
@@ -487,7 +487,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
                 callback = defaultConsumer;
             }
         }
-
+        // Envelope(deliveryTag=1, redeliver=false, exchange=, routingKey=test)
         Envelope envelope = new Envelope(m.getDeliveryTag(),
                 m.getRedelivered(),
                 m.getExchange(),
@@ -496,7 +496,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
             // call metricsCollector before the dispatching (which is async anyway)
             // this way, the message is inside the stats before it is handled
             // in case a manual ack in the callback, the stats will be able to record the ack
-            metricsCollector.consumedMessage(this, m.getDeliveryTag(), m.getConsumerTag());
+            metricsCollector.consumedMessage(this, m.getDeliveryTag(), m.getConsumerTag()); // 用于统计消息的消费情况。具体来说，它记录了当前通道（channel）消费的消息数量，以及消息的deliveryTag和consumerTag
             this.dispatcher.handleDelivery(callback,
                     m.getConsumerTag(),
                     envelope,
@@ -759,9 +759,9 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
             deliveryTag = 0;
         }
         if (props == null) {
-            props = MessageProperties.MINIMAL_BASIC;
+            props = MessageProperties.MINIMAL_BASIC; // #contentHeader<basic>(content-type=null, content-encoding=null, headers=null, delivery-mode=null, priority=null, correlation-id=null, reply-to=null, expiration=null, message-id=null, timestamp=null, type=null, user-id=null, app-id=null, cluster-id=null)
         }
-        AMQP.Basic.Publish publish = new Basic.Publish.Builder()
+        AMQP.Basic.Publish publish = new Basic.Publish.Builder() // #method<basic.publish>(ticket=0, exchange=, routing-key=dc2d7197-666d-424a-a233-f4c63f34ee8d, mandatory=false, immediate=false)
                 .exchange(exchange)
                 .routingKey(routingKey)
                 .mandatory(mandatory)
@@ -1491,22 +1491,22 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
                                boolean noLocal, boolean exclusive, Map<String, Object> arguments,
                                final Consumer callback)
             throws IOException {
-        final Method m = new Basic.Consume.Builder()
+        final Method m = new Basic.Consume.Builder() // #method<basic.consume>(ticket=0, queue=test, consumer-tag=, no-local=false, no-ack=true, exclusive=false, nowait=false, arguments=null)
                 .queue(queue)
                 .consumerTag(consumerTag)
                 .noLocal(noLocal)
-                .noAck(autoAck)
+                .noAck(autoAck) // 如果autoAck=true，那么就会告诉服务端这个消息无序消费ack
                 .exclusive(exclusive)
                 .arguments(arguments)
-                .build();
-        BlockingRpcContinuation<String> k = new BlockingRpcContinuation<String>(m) {
+                .build(); // 订阅消息
+        BlockingRpcContinuation<String> k = new BlockingRpcContinuation<String>(m) { // 收到订阅的消息的都会回调这里
             @Override
             public String transformReply(AMQCommand replyCommand) {
-                String actualConsumerTag = ((Basic.ConsumeOk) replyCommand.getMethod()).getConsumerTag();
+                String actualConsumerTag = ((Basic.ConsumeOk) replyCommand.getMethod()).getConsumerTag(); // 获取订阅的唯一标识
                 Consumer wrappedCallback = observationCollector.basicConsume(queue, consumerTag, callback);
                 _consumers.put(actualConsumerTag, wrappedCallback);
 
-                // need to register consumer in stats before it actually starts consuming
+                // need to register consumer in stats before it actually starts consuming 需要在消费者实际开始消费之前在统计系统中注册该消费者
                 metricsCollector.basicConsume(ChannelN.this, actualConsumerTag, autoAck);
 
                 dispatcher.handleConsumeOk(wrappedCallback, actualConsumerTag);
@@ -1515,14 +1515,14 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
         };
 
 
-        rpc(m, k);
+        rpc(m, k); // 订阅消息发给远程，并且注册远程的应答回调
 
         try {
             if (_rpcTimeout == NO_RPC_TIMEOUT) {
-                return k.getReply();
+                return k.getReply(); //
             } else {
                 try {
-                    return k.getReply(_rpcTimeout);
+                    return k.getReply(_rpcTimeout); // 如果服务端将订阅成功ack推送给客户端后，客户端的MainLoop线程收到消息，处理消息，将消息设置入BlockingCell，MainLoop线程唤醒本线程，这里会被唤醒，并且将消息获取到返回
                 } catch (TimeoutException e) {
                     throw wrapTimeoutException(m, e);
                 }

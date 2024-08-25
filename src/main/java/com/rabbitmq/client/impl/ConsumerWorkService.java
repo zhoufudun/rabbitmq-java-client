@@ -85,7 +85,7 @@ final public class ConsumerWorkService {
 
     public void addWork(Channel channel, Runnable runnable) {
         if (this.workPool.addWorkItem(channel, runnable)) {
-            this.executor.execute(new WorkPoolRunnable());
+            this.executor.execute(new WorkPoolRunnable()); // 提交一个任务，他可以处理一批客户端的消息
         }
     }
 
@@ -97,14 +97,15 @@ final public class ConsumerWorkService {
         return privateExecutor;
     }
 
+    // 运行一批客户端的任务后退出
     private final class WorkPoolRunnable implements Runnable {
 
         @Override
         public void run() {
-            int size = MAX_RUNNABLE_BLOCK_SIZE;
+            int size = MAX_RUNNABLE_BLOCK_SIZE; // 一次性最大处理256个
             List<Runnable> block = new ArrayList<Runnable>(size);
             try {
-                Channel key = ConsumerWorkService.this.workPool.nextWorkBlock(block, size);
+                Channel key = ConsumerWorkService.this.workPool.nextWorkBlock(block, size); // 获取一个客户端的全部消息（List<Runnable>）
                 if (key == null) return; // nothing ready to run
                 try {
                     for (Runnable runnable : block) {

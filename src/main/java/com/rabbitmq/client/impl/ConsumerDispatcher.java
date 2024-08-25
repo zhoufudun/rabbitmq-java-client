@@ -33,14 +33,16 @@ import java.util.concurrent.CountDownLatch;
  * <p/>
  * Each {@link Channel} has a single <code>ConsumerDispatcher</code>, but the executor service and work
  * pool may be shared with other channels, typically those on the same {@link AMQConnection}.
+ * <p>
+ * 专门用来处理客户端消费回调
  */
 final class ConsumerDispatcher {
 
-    private final ConsumerWorkService workService;
+    private final ConsumerWorkService workService; // ConsumerWorkService是所有channel共享
+    // com.rabbitmq.client.impl.recovery.RecoveryAwareAMQConnection
+    private final AMQConnection connection; // amqp://guest@0:0:0:0:0:0:0:1:5672//zfdtest
 
-    private final AMQConnection connection;
-
-    private final Channel channel;
+    private final Channel channel; // AMQChannel(amqp://guest@0:0:0:0:0:0:0:1:5672//zfdtest,1)
 
     private volatile boolean shuttingDown = false;
     private volatile boolean shutdownConsumersDriven = false;
@@ -69,14 +71,15 @@ final class ConsumerDispatcher {
         this.workService.setUnlimited(channel, unlimited);
     }
 
-    public void handleConsumeOk(final Consumer delegate,
+    // MainLoop线程收到订阅的消息，会调用这里，这里必须异步提交到线程池进行正在的客户端消费处理，否者会阻塞MainLoop线程
+    public void handleConsumeOk(final Consumer delegate, // com.rabbitmq.client.impl.recovery.AutorecoveringChannel$2
                                 final String consumerTag) {
         executeUnlessShuttingDown(
                 new Runnable() {
                     @Override
                     public void run() {
                         try {
-                            delegate.handleConsumeOk(consumerTag);
+                            delegate.handleConsumeOk(consumerTag); // 服务端推送客户端订阅的消息，或者推送客户端订阅成功消息
                         } catch (Throwable ex) {
                             connection.getExceptionHandler().handleConsumerException(
                                     channel,

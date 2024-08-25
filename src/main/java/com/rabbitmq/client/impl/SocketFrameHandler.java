@@ -56,7 +56,8 @@ public class SocketFrameHandler implements FrameHandler {
     private final DataInputStream _inputStream;
     private final Lock _inputStreamLock = new ReentrantLock();
 
-    /** Socket 的输出流——向代理发送的数据——在某个对象上同步
+    /**
+     * Socket 的输出流——向代理发送的数据——在某个对象上同步
      * Socket's outputstream - data to the broker - synchronized on
      */
     private final DataOutputStream _outputStream;
@@ -241,6 +242,7 @@ public class SocketFrameHandler implements FrameHandler {
         };
         Future<Void> flushTask = null;
         try {
+
             if (this._shutdownExecutor == null) {
                 flushCallable.call();
             } else {

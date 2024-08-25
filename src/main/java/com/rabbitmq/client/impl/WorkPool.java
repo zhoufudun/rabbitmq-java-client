@@ -53,7 +53,7 @@ import java.util.function.BiConsumer;
  * @param <W> Work -- type of work item
  *
  *
- * 这是2010年11月《渠道工作》（channels.pdf）中渠道规范的通用实现。必须使用registerKey（K）注册K类型的对象，
+ * 这是2010年11月（channels.pdf）中channel规范的通用实现。必须使用registerKey（K）注册K类型的对象，
  * 然后它们成为客户端，并为每个客户端存储一个项目队列（W类型）。
  * 每个客户端都有一个状态，该状态恰好是休眠、进行中或就绪状态之一。
  * 注册后，客户立即处于休眠状态。可以使用addWorkItem（Object，Object）将项目（单独）添加到客户端的队列（末尾）。
@@ -69,10 +69,10 @@ public class WorkPool<K, W> {
     private static final int MAX_QUEUE_LENGTH = 1000;
 
     /** An injective queue of <i>ready</i> clients. */
-    private final SetQueue<K> ready = new SetQueue<K>();
-    /** The set of clients which have work <i>in progress</i>. */
+    private final SetQueue<K> ready = new SetQueue<K>(); // 准备处理的客户端集合
+    /** The set of clients which have work <i>in progress</i>. */ // 正在处理中的客户端集合
     private final Set<K> inProgress = new HashSet<K>();
-    /** The pool of registered clients, with their work queues. */
+    /** The pool of registered clients, with their work queues. */     // 每一个channel（client）拥有一个队列
     private final Map<K, VariableLinkedBlockingQueue<W>> pool = new HashMap<K, VariableLinkedBlockingQueue<W>>();
     /** Those keys which want limits to be removed. We do not limit queue size if this is non-empty. */
     // 那些希望移除限制的键。如果这个集合非空，我们将不限制队列大小
@@ -174,10 +174,10 @@ public class WorkPool<K, W> {
      */
     public K nextWorkBlock(Collection<W> to, int size) {
         synchronized (this) {
-            K nextKey = readyToInProgress();
+            K nextKey = readyToInProgress(); // 将read状态的channel转变为处理中状态： ready集合中移除，加入InProgress集合。。。。 key 举例：RecoveryAwareChannelN = AMQChannel(amqp://guest@127.0.0.1:5672//zfdtest,1)
             if (nextKey != null) {
                 VariableLinkedBlockingQueue<W> queue = this.pool.get(nextKey);
-                drainTo(queue, to, size);
+                drainTo(queue, to, size); // queue消息全部倒入to集合中
             }
             return nextKey;
         }
@@ -202,7 +202,7 @@ public class WorkPool<K, W> {
         return n;
     }
 
-    /**
+    /** 为特定客户端添加（入队）一个item。如果客户端未注册，则不进行更改并返回 false。如果客户端处于休眠状态，则将其标记为就绪。
      * Add (enqueue) an item for a specific client.
      * No change and returns <code><b>false</b></code> if client not registered.
      * If <i>dormant</i>, the client will be marked <i>ready</i>.
@@ -218,11 +218,11 @@ public class WorkPool<K, W> {
         }
         // The put operation may block. We need to make sure we are not holding the lock while that happens.
         if (queue != null) {
-            enqueueingCallback.accept(queue, item);
+            enqueueingCallback.accept(queue, item); // item是一个Runnable或者其他类型
 
             synchronized (this) {
-                if (isDormant(key)) {
-                    dormantToReady(key);
+                if (isDormant(key)) { // 客户端已经注册 && 没有处理中 && 没有准备好
+                    dormantToReady(key); // 将客户端标记为准备：休眠状态转变为准备状态
                     return true;
                 }
             }
@@ -230,7 +230,7 @@ public class WorkPool<K, W> {
         return false;
     }
 
-    /**
+    /** 标记完成工作的客户端不再处于进行中状态。如果客户端未注册或未处于进行中状态，将抛出异常。如果客户端有更多的工作项，它将被标记为就绪；否则，它将被标记为休眠
      * Set client no longer <i>in progress</i>.
      * Ignore unknown clients (and return <code><b>false</b></code>).
      * @param key client that has finished work
@@ -247,7 +247,7 @@ public class WorkPool<K, W> {
 
             if (moreWorkItems(key)) {
                 inProgressToReady(key);
-                return true;
+                return true; // 当前channel还有数据，返回true，外部继续提交任务处理
             } else {
                 inProgressToDormant(key);
                 return false;

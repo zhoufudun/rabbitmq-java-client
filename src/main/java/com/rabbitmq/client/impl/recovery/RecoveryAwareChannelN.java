@@ -85,7 +85,7 @@ public class RecoveryAwareChannelN extends ChannelN {
         }
         super.processDelivery(command, offsetDeliveryTag(method));
     }
-
+    // offsetDeliveryTag方法创建一个新的AMQImpl.Basic.Deliver对象，将原始交付标签加上activeDeliveryTagOffset，以得到一个偏移后的交付标签。这样做是为了在连接恢复后，能够正确地识别和处理那些在连接中断期间到达的消息。？？？
     private AMQImpl.Basic.Deliver offsetDeliveryTag(AMQImpl.Basic.Deliver method) {
         return new AMQImpl.Basic.Deliver(method.getConsumerTag(),
                                          method.getDeliveryTag() + activeDeliveryTagOffset,
@@ -96,7 +96,7 @@ public class RecoveryAwareChannelN extends ChannelN {
 
     @Override
     public void basicAck(long deliveryTag, boolean multiple) throws IOException {
-        long realTag = deliveryTag - activeDeliveryTagOffset;
+        long realTag = deliveryTag - activeDeliveryTagOffset; // activeDeliveryTagOffset是故障回复后的之前的消息偏移量
         // Last delivery is likely the same one a long running consumer is still processing,
         // so realTag might end up being 0.
         //  has a special meaning in the protocol ("acknowledge all unacknowledged tags),
@@ -140,7 +140,7 @@ public class RecoveryAwareChannelN extends ChannelN {
             metricsCollector.basicReject(this, deliveryTag);
         }
     }
-
+    // 用于在创建新的RecoveryAwareChannelN实例时，继承另一个实例的activeDeliveryTagOffset和maxSeenDeliveryTag。这样做是为了确保在连接恢复时，新的通道能够继续处理之前未完成的消息
     void inheritOffsetFrom(RecoveryAwareChannelN other) {
         activeDeliveryTagOffset = other.getActiveDeliveryTagOffset() + other.getMaxSeenDeliveryTag();
         maxSeenDeliveryTag = 0;

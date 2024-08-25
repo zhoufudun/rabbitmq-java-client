@@ -24,60 +24,56 @@ import org.junit.jupiter.api.Test;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Method;
 
-public class AMQBuilderApiTest extends BrokerTestCase
-{
+public class AMQBuilderApiTest extends BrokerTestCase {
     private static final String XCHG_NAME = "builder_test_xchg";
 
-    @Test public void particularBuilderForBasicSanityWithRpc() throws IOException
-    {
+    @Test
+    public void particularBuilderForBasicSanityWithRpc() throws IOException {
         Method retVal =
                 channel.rpc(new AMQP.Exchange.Declare.Builder()
-                           .exchange(XCHG_NAME)
-                           .type("direct")
-                           .durable(false)
-                           .build()
-                           ).getMethod();
+                        .exchange(XCHG_NAME)
+                        .type("direct")
+                        .durable(false)
+                        .build()
+                ).getMethod();
 
         assertTrue(channel.isOpen(), "Channel should still be open.");
         assertTrue(retVal instanceof AMQP.Exchange.DeclareOk);
 
         retVal = channel.rpc(new AMQP.Exchange.Delete.Builder()
-                            .exchange(XCHG_NAME)
-                            .build()
-                            ).getMethod();
-        
+                .exchange(XCHG_NAME)
+                .build()
+        ).getMethod();
+
         assertTrue(channel.isOpen(), "Channel should still be open.");
         assertTrue(retVal instanceof AMQP.Exchange.DeleteOk);
     }
 
-    @Test public void particularBuilderForBasicSanityWithAsyncRpc() throws IOException
-    {
+    @Test
+    public void particularBuilderForBasicSanityWithAsyncRpc() throws IOException {
         channel.asyncRpc(new AMQP.Exchange.Declare.Builder()
-                        .exchange(XCHG_NAME)
-                        .type("direct")
-                        .durable(false)
-                        .build()
-                        );
+                .exchange(XCHG_NAME)
+                .type("direct")
+                .durable(false)
+                .build()
+        );
 
         assertTrue(channel.isOpen(), "Channel should still be open.");
 
         channel.asyncRpc(new AMQP.Exchange.Delete.Builder()
-                        .exchange(XCHG_NAME)
-                        .build()
-                        );
+                .exchange(XCHG_NAME)
+                .build()
+        );
 
         assertTrue(channel.isOpen(), "Channel should still be open.");
     }
 
-    @Test public void illFormedBuilder()
-    {
-        try
-        {
+    @Test
+    public void illFormedBuilder() {
+        try {
             new AMQP.Exchange.Declare.Builder().build();
             fail("Should have thrown IllegalStateException");
-        }
-        catch (Exception e)
-        {
+        } catch (Exception e) {
             assertTrue(e instanceof IllegalStateException);
         }
     }

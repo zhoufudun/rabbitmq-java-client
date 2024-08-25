@@ -29,58 +29,59 @@ import java.util.Set;
 
 public class Utility {
     static class ThrowableCreatedElsewhere extends Throwable {
-        /** Default for non-checking. */
+        /**
+         * Default for non-checking.
+         */
         private static final long serialVersionUID = 1L;
 
         public ThrowableCreatedElsewhere(Throwable throwable) {
-          super(throwable.getClass() + " created elsewhere");
-          this.setStackTrace(throwable.getStackTrace());
+            super(throwable.getClass() + " created elsewhere");
+            this.setStackTrace(throwable.getStackTrace());
         }
 
         @Override
-        public synchronized Throwable fillInStackTrace(){
+        public synchronized Throwable fillInStackTrace() {
             return this;
         }
     }
 
     public static <T extends Throwable & SensibleClone<T>> T fixStackTrace(T throwable) {
-      throwable = throwable.sensibleClone();
+        throwable = throwable.sensibleClone();
 
-      if(throwable.getCause() == null) {
-        // We'd like to preserve the original stack trace in the cause.
-        // Unfortunately Java doesn't let you set the cause once it's been
-        // set once. This means we have to choose between either
-        //  - not preserving the type
-        //  - sometimes losing the original stack trace
-        //  - performing nasty reflective voodoo which may or may not work
-        // We only lose the original stack trace when there's a root cause
-        // which will hopefully be enlightening enough on its own that it
-        // doesn't matter too much.
-        try {
-          throwable.initCause(new ThrowableCreatedElsewhere(throwable));
-        } catch(IllegalStateException e) {
-          // This exception was explicitly initialised with a null cause.
-          // Alas this means we can't set the cause even though it has none.
-          // Thanks.
+        if (throwable.getCause() == null) {
+            // We'd like to preserve the original stack trace in the cause.
+            // Unfortunately Java doesn't let you set the cause once it's been
+            // set once. This means we have to choose between either
+            //  - not preserving the type
+            //  - sometimes losing the original stack trace
+            //  - performing nasty reflective voodoo which may or may not work
+            // We only lose the original stack trace when there's a root cause
+            // which will hopefully be enlightening enough on its own that it
+            // doesn't matter too much.
+            try {
+                throwable.initCause(new ThrowableCreatedElsewhere(throwable));
+            } catch (IllegalStateException e) {
+                // This exception was explicitly initialised with a null cause.
+                // Alas this means we can't set the cause even though it has none.
+                // Thanks.
+            }
         }
-      }
 
 
-      throwable.fillInStackTrace();
-      // We want to remove fixStackTrace from the trace.
-      StackTraceElement[] existing = throwable.getStackTrace();
-      StackTraceElement[] newTrace = new StackTraceElement[existing.length - 1];
-      System.arraycopy(existing, 1, newTrace, 0, newTrace.length);
-      throwable.setStackTrace(newTrace);
-      return throwable;
+        throwable.fillInStackTrace();
+        // We want to remove fixStackTrace from the trace.
+        StackTraceElement[] existing = throwable.getStackTrace();
+        StackTraceElement[] newTrace = new StackTraceElement[existing.length - 1];
+        System.arraycopy(existing, 1, newTrace, 0, newTrace.length);
+        throwable.setStackTrace(newTrace);
+        return throwable;
     }
-    
+
     /**
      * Synchronizes on the set and then returns a copy of the set that is safe to iterate over. Useful when wanting to do thread-safe iteration over
      * a Set wrapped in {@link Collections#synchronizedSet(Set)}.
      *
-     * @param set
-     *            The set, which may not be {@code null}
+     * @param set The set, which may not be {@code null}
      * @return LinkedHashSet copy of the set
      */
     public static <E> Set<E> copy(final Set<E> set) {
@@ -89,13 +90,12 @@ public class Utility {
             return new LinkedHashSet<>(set);
         }
     }
-    
+
     /**
      * Synchronizes on the list and then returns a copy of the list that is safe to iterate over. Useful when wanting to do thread-safe iteration over
      * a List wrapped in {@link Collections#synchronizedList(List)}.
      *
-     * @param list
-     *            The list, which may not be {@code null}
+     * @param list The list, which may not be {@code null}
      * @return ArrayList copy of the list
      */
     public static <E> List<E> copy(final List<E> list) {
@@ -104,13 +104,12 @@ public class Utility {
             return new ArrayList<>(list);
         }
     }
-    
+
     /**
      * Synchronizes on the map and then returns a copy of the map that is safe to iterate over. Useful when wanting to do thread-safe iteration over a
      * Map wrapped in {@link Collections#synchronizedMap(Map)}
      *
-     * @param map
-     *            The map, which may not be {@code null}
+     * @param map The map, which may not be {@code null}
      * @return LinkedHashMap copy of the map
      */
     public static <K, V> Map<K, V> copy(final Map<K, V> map) {

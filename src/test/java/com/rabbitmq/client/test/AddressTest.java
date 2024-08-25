@@ -28,7 +28,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public class AddressTest {
 
-    @Test public void isHostWithPort() {
+    @Test
+    public void isHostWithPort() {
         assertTrue(Address.isHostWithPort("127.0.0.1:5672"));
         assertTrue(Address.isHostWithPort("[1080:0:0:0:8:800:200C:417A]:5672"));
         assertTrue(Address.isHostWithPort("[::1]:5672"));
@@ -38,7 +39,8 @@ public class AddressTest {
         assertFalse(Address.isHostWithPort("[::1]"));
     }
 
-    @Test public void parseHost() {
+    @Test
+    public void parseHost() {
         assertEquals("127.0.0.1", Address.parseHost("127.0.0.1:5672"));
         assertEquals("[1080:0:0:0:8:800:200C:417A]", Address.parseHost("[1080:0:0:0:8:800:200C:417A]:5673"));
         assertEquals("[::1]", Address.parseHost("[::1]:5672"));
@@ -48,7 +50,8 @@ public class AddressTest {
         assertEquals("[::1]", Address.parseHost("[::1]"));
     }
 
-    @Test public void parsePort() {
+    @Test
+    public void parsePort() {
         assertEquals(5672, Address.parsePort("127.0.0.1:5672"));
         assertEquals(5673, Address.parsePort("[1080:0:0:0:8:800:200C:417A]:5673"));
         assertEquals(5672, Address.parsePort("[::1]:5672"));
@@ -59,12 +62,14 @@ public class AddressTest {
         assertEquals(-1, Address.parsePort("[::1]"));
     }
 
-    @Test public void parseIPv4() {
+    @Test
+    public void parseIPv4() {
         assertEquals(addr("192.168.1.10"), Address.parseAddress("192.168.1.10"));
         assertEquals(addr("192.168.1.10", 5682), Address.parseAddress("192.168.1.10:5682"));
     }
 
-    @Test public void parseIPv6() {
+    @Test
+    public void parseIPv6() {
         // quoted IPv6 addresses without a port
         assertEquals(addr("[1080:0:0:0:8:800:200C:417A]"), Address.parseAddress("[1080:0:0:0:8:800:200C:417A]"));
         assertEquals(addr("[::1]"), Address.parseAddress("[::1]"));
@@ -78,7 +83,7 @@ public class AddressTest {
     public void parseUnquotedIPv6() {
         // using a non-quoted IPv6 addresses with a port
         Assertions.assertThatThrownBy(() -> Address.parseAddress("::1:5673"))
-            .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     private Address addr(String addr) {

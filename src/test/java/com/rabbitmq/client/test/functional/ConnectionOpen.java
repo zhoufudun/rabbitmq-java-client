@@ -42,11 +42,13 @@ import javax.net.SocketFactory;
  * Check that protocol negotiation works
  */
 public class ConnectionOpen {
-    @Test public void correctProtocolHeader() throws IOException {
+    @Test
+    public void correctProtocolHeader() throws IOException {
         SocketFrameHandler fh = new SocketFrameHandler(SocketFactory.getDefault().createSocket("localhost", AMQP.PROTOCOL.PORT));
         fh.sendHeader();
         AMQCommand command = new AMQCommand();
-        while (!command.handleFrame(fh.readFrame())) { }
+        while (!command.handleFrame(fh.readFrame())) {
+        }
         Method m = command.getMethod();
 
         assertTrue(m instanceof AMQP.Connection.Start, "First command must be Connection.start");
@@ -54,10 +56,11 @@ public class ConnectionOpen {
         assertTrue(start.getVersionMajor() < AMQP.PROTOCOL.MAJOR ||
                         (start.getVersionMajor() == AMQP.PROTOCOL.MAJOR &&
                                 start.getVersionMinor() <= AMQP.PROTOCOL.MINOR),
-            "Version in Connection.start is <= what we sent");
+                "Version in Connection.start is <= what we sent");
     }
 
-    @Test public void crazyProtocolHeader() throws IOException {
+    @Test
+    public void crazyProtocolHeader() throws IOException {
         ConnectionFactory factory = TestUtils.connectionFactory();
         // keep the frame handler's socket
         Socket fhSocket = SocketFactory.getDefault().createSocket("localhost", AMQP.PROTOCOL.PORT);
@@ -89,13 +92,13 @@ public class ConnectionOpen {
         }
     }
 
-    @Test public void frameMaxLessThanFrameMinSize() throws IOException, TimeoutException {
+    @Test
+    public void frameMaxLessThanFrameMinSize() throws IOException, TimeoutException {
         ConnectionFactory factory = TestUtils.connectionFactory();
         factory.setRequestedFrameMax(100);
         try {
             factory.newConnection();
-        }
-        catch (IOException ioe) {
+        } catch (IOException ioe) {
             return;
         }
         fail("Broker should have closed the connection since our frame max < frame_min_size");

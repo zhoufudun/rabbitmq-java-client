@@ -572,6 +572,7 @@ public class AutorecoveringChannel implements RecoverableChannel {
 
             @Override
             public void handleConsumeOk(String consumerTag) {
+                // 客户端订阅消息成功后，服务端回发送ConsumerOK消息，客户端回调这里
             }
 
             @Override
@@ -908,12 +909,12 @@ public class AutorecoveringChannel implements RecoverableChannel {
                                 Map<String, Object> arguments,
                                 Consumer callback) {
         RecordedConsumer consumer = new RecordedConsumer(this, queue).
-                autoAck(autoAck).
-                consumerTag(result).
-                exclusive(exclusive).
-                arguments(arguments).
-                consumer(callback);
-        this.consumerTags.add(result);
+                autoAck(autoAck). // true
+                consumerTag(result). // amq.ctag-1DJZwjnvWVmLxQIlaIqlPA
+                exclusive(exclusive). // false
+                arguments(arguments). // null
+                consumer(callback); // 消费者回调
+        this.consumerTags.add(result); // amq.ctag-1DJZwjnvWVmLxQIlaIqlPA   每个消费者有一个唯一的标识，由服务端生成
         this.connection.recordConsumer(result, consumer);
     }
 

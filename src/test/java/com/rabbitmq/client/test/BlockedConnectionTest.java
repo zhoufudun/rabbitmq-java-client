@@ -22,41 +22,44 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
+
 import java.util.concurrent.CountDownLatch;
+
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 public class BlockedConnectionTest extends BrokerTestCase {
 
-  @ParameterizedTest
-  @ValueSource(booleans = {true, false})
-  void errorInBlockListenerShouldCloseConnection(boolean nio) throws Exception {
-    ConnectionFactory cf = TestUtils.connectionFactory();
-    if (nio) {
-      cf.useNio();
-    } else {
-      cf.useBlockingIo();
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void errorInBlockListenerShouldCloseConnection(boolean nio) throws Exception {
+        ConnectionFactory cf = TestUtils.connectionFactory();
+        if (nio) {
+            cf.useNio();
+        } else {
+            cf.useBlockingIo();
+        }
+        Connection c = cf.newConnection();
+        CountDownLatch shutdownLatch = new CountDownLatch(1);
+        c.addShutdownListener(cause -> shutdownLatch.countDown());
+        CountDownLatch blockedLatch = new CountDownLatch(1);
+        c.addBlockedListener(
+                reason -> {
+                    blockedLatch.countDown();
+                    throw new RuntimeException("error in blocked listener!");
+                },
+                () -> {
+                });
+        try {
+            block();
+            Channel ch = c.createChannel();
+            ch.basicPublish("", "", null, "dummy".getBytes());
+            assertThat(blockedLatch).is(completed());
+        } finally {
+            unblock();
+        }
+        assertThat(shutdownLatch).is(completed());
+        waitAtMost(() -> !c.isOpen());
     }
-    Connection c = cf.newConnection();
-    CountDownLatch shutdownLatch = new CountDownLatch(1);
-    c.addShutdownListener(cause -> shutdownLatch.countDown());
-    CountDownLatch blockedLatch = new CountDownLatch(1);
-    c.addBlockedListener(
-        reason -> {
-          blockedLatch.countDown();
-          throw new RuntimeException("error in blocked listener!");
-        },
-        () -> {});
-    try {
-      block();
-      Channel ch = c.createChannel();
-      ch.basicPublish("", "", null, "dummy".getBytes());
-      assertThat(blockedLatch).is(completed());
-    } finally {
-      unblock();
-    }
-    assertThat(shutdownLatch).is(completed());
-    waitAtMost(() -> !c.isOpen());
-  }
 
 }

@@ -19,12 +19,14 @@ import com.rabbitmq.client.*;
 import com.rabbitmq.client.impl.NetworkConnection;
 import com.rabbitmq.client.impl.recovery.AutorecoveringConnection;
 import com.rabbitmq.tools.Host;
+
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.util.function.Function;
+
 import org.assertj.core.api.Assertions;
 import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.extension.ConditionEvaluationResult;
@@ -56,6 +58,7 @@ public class TestUtils {
         } else {
             connectionFactory.useBlockingIo();
         }
+        connectionFactory.setVirtualHost("/zfdtest");
         return connectionFactory;
     }
 
@@ -67,7 +70,7 @@ public class TestUtils {
     }
 
     public static void waitAtMost(CallableBooleanSupplier condition) {
-       waitAtMost(Duration.ofSeconds(10), condition);
+        waitAtMost(Duration.ofSeconds(10), condition);
     }
 
     public static void waitAtMost(Duration timeout, CallableBooleanSupplier condition) {
@@ -318,20 +321,20 @@ public class TestUtils {
 
         static Condition<CountDownLatch> completed() {
             return new Condition<>(
-                countDownLatch-> {
-                    try {
-                        return countDownLatch.await(10, TimeUnit.SECONDS);
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
-                },
-                "Latch did not complete in 10 seconds");
+                    countDownLatch -> {
+                        try {
+                            return countDownLatch.await(10, TimeUnit.SECONDS);
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException(e);
+                        }
+                    },
+                    "Latch did not complete in 10 seconds");
         }
 
     }
 
     public static boolean basicGetBasicConsume(Connection connection, String queue, final CountDownLatch latch, int msgSize)
-        throws Exception {
+            throws Exception {
         Channel channel = connection.createChannel();
         channel.queueDeclare(queue, false, true, false, null);
         channel.queuePurge(queue);
@@ -403,7 +406,7 @@ public class TestUtils {
     }
 
     private static class BaseBrokerVersionAtLeastCondition implements
-        org.junit.jupiter.api.extension.ExecutionCondition {
+            org.junit.jupiter.api.extension.ExecutionCondition {
 
         private final Function<ExtensionContext, String> versionProvider;
 
@@ -421,49 +424,49 @@ public class TestUtils {
                 return ConditionEvaluationResult.enabled("No broker version requirement");
             } else {
                 String brokerVersion =
-                    context
-                        .getRoot()
-                        .getStore(Namespace.GLOBAL)
-                        .getOrComputeIfAbsent(
-                            "brokerVersion",
-                            k -> {
-                                try (Connection c = TestUtils.connectionFactory().newConnection()) {
-                                    return currentVersion(
-                                        c.getServerProperties().get("version").toString()
-                                    );
-                                } catch (Exception e) {
-                                    throw new RuntimeException(e);
-                                }
-                            },
-                            String.class);
+                        context
+                                .getRoot()
+                                .getStore(Namespace.GLOBAL)
+                                .getOrComputeIfAbsent(
+                                        "brokerVersion",
+                                        k -> {
+                                            try (Connection c = TestUtils.connectionFactory().newConnection()) {
+                                                return currentVersion(
+                                                        c.getServerProperties().get("version").toString()
+                                                );
+                                            } catch (Exception e) {
+                                                throw new RuntimeException(e);
+                                            }
+                                        },
+                                        String.class);
 
                 if (atLeastVersion(expectedVersion, brokerVersion)) {
                     return ConditionEvaluationResult.enabled(
-                        "Broker version requirement met, expected "
-                            + expectedVersion
-                            + ", actual "
-                            + brokerVersion);
+                            "Broker version requirement met, expected "
+                                    + expectedVersion
+                                    + ", actual "
+                                    + brokerVersion);
                 } else {
                     return ConditionEvaluationResult.disabled(
-                        "Broker version requirement not met, expected "
-                            + expectedVersion
-                            + ", actual "
-                            + brokerVersion);
+                            "Broker version requirement not met, expected "
+                                    + expectedVersion
+                                    + ", actual "
+                                    + brokerVersion);
                 }
             }
         }
     }
 
     private static class AnnotationBrokerVersionAtLeastCondition
-        extends BaseBrokerVersionAtLeastCondition {
+            extends BaseBrokerVersionAtLeastCondition {
 
         private AnnotationBrokerVersionAtLeastCondition() {
             super(
-                context -> {
-                    BrokerVersionAtLeast annotation =
-                        context.getElement().get().getAnnotation(BrokerVersionAtLeast.class);
-                    return annotation == null ? null : annotation.value().toString();
-                });
+                    context -> {
+                        BrokerVersionAtLeast annotation =
+                                context.getElement().get().getAnnotation(BrokerVersionAtLeast.class);
+                        return annotation == null ? null : annotation.value().toString();
+                    });
         }
     }
 
@@ -500,7 +503,7 @@ public class TestUtils {
     }
 
     static class DisabledIfBrokerRunningOnDockerCondition implements
-        org.junit.jupiter.api.extension.ExecutionCondition {
+            org.junit.jupiter.api.extension.ExecutionCondition {
 
         @Override
         public ConditionEvaluationResult evaluateExecutionCondition(ExtensionContext context) {
@@ -516,6 +519,7 @@ public class TestUtils {
     @Retention(RetentionPolicy.RUNTIME)
     @Documented
     @ExtendWith(DisabledIfBrokerRunningOnDockerCondition.class)
-    @interface DisabledIfBrokerRunningOnDocker {}
+    @interface DisabledIfBrokerRunningOnDocker {
+    }
 
 }

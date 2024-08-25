@@ -79,7 +79,7 @@ public interface Consumer {
      */
     void handleRecoverOk(String consumerTag);
 
-    /**
+    /** 收到服务端的消息
      * Called when a <code><b>basic.deliver</b></code> is received for this consumer.
      * @param consumerTag the <i>consumer tag</i> associated with the consumer
      * @param envelope packaging data for the message

@@ -90,20 +90,20 @@ public class DefaultRetryHandlerTest {
         conditionsReturn(false);
         handler = handler();
         assertExceptionIsThrown(
-            "No retry, initial exception should have been re-thrown",
-            () -> handler.retryQueueRecovery(retryContext())
+                "No retry, initial exception should have been re-thrown",
+                () -> handler.retryQueueRecovery(retryContext())
         );
         assertExceptionIsThrown(
-            "No retry, initial exception should have been re-thrown",
-            () -> handler.retryExchangeRecovery(retryContext())
+                "No retry, initial exception should have been re-thrown",
+                () -> handler.retryExchangeRecovery(retryContext())
         );
         assertExceptionIsThrown(
-            "No retry, initial exception should have been re-thrown",
-            () -> handler.retryBindingRecovery(retryContext())
+                "No retry, initial exception should have been re-thrown",
+                () -> handler.retryBindingRecovery(retryContext())
         );
         assertExceptionIsThrown(
-            "No retry, initial exception should have been re-thrown",
-            () -> handler.retryConsumerRecovery(retryContext())
+                "No retry, initial exception should have been re-thrown",
+                () -> handler.retryConsumerRecovery(retryContext())
         );
         verifyConditionsInvocation(times(1));
         verifyOperationsInvocation(never());
@@ -119,20 +119,20 @@ public class DefaultRetryHandlerTest {
         when(consumerRecoveryRetryOperation.call(any(RetryContext.class))).thenReturn("consumer");
         handler = handler();
         assertEquals(
-            "queue",
-            handler.retryQueueRecovery(retryContext()).getResult()
+                "queue",
+                handler.retryQueueRecovery(retryContext()).getResult()
         );
         assertEquals(
-            "exchange",
-            handler.retryExchangeRecovery(retryContext()).getResult()
+                "exchange",
+                handler.retryExchangeRecovery(retryContext()).getResult()
         );
         assertEquals(
-            "binding",
-            handler.retryBindingRecovery(retryContext()).getResult()
+                "binding",
+                handler.retryBindingRecovery(retryContext()).getResult()
         );
         assertEquals(
-            "consumer",
-            handler.retryConsumerRecovery(retryContext()).getResult()
+                "consumer",
+                handler.retryConsumerRecovery(retryContext()).getResult()
         );
         verifyConditionsInvocation(times(1));
         verifyOperationsInvocation(times(1));
@@ -143,29 +143,29 @@ public class DefaultRetryHandlerTest {
     public void shouldRetryWhenOperationFailsAndConditionIsTrue() throws Exception {
         conditionsReturn(true);
         when(queueRecoveryRetryOperation.call(any(RetryContext.class)))
-            .thenThrow(new Exception()).thenReturn("queue");
+                .thenThrow(new Exception()).thenReturn("queue");
         when(exchangeRecoveryRetryOperation.call(any(RetryContext.class)))
-            .thenThrow(new Exception()).thenReturn("exchange");
+                .thenThrow(new Exception()).thenReturn("exchange");
         when(bindingRecoveryRetryOperation.call(any(RetryContext.class)))
-            .thenThrow(new Exception()).thenReturn("binding");
+                .thenThrow(new Exception()).thenReturn("binding");
         when(consumerRecoveryRetryOperation.call(any(RetryContext.class)))
-            .thenThrow(new Exception()).thenReturn("consumer");
+                .thenThrow(new Exception()).thenReturn("consumer");
         handler = handler(2);
         assertEquals(
-            "queue",
-            handler.retryQueueRecovery(retryContext()).getResult()
+                "queue",
+                handler.retryQueueRecovery(retryContext()).getResult()
         );
         assertEquals(
-            "exchange",
-            handler.retryExchangeRecovery(retryContext()).getResult()
+                "exchange",
+                handler.retryExchangeRecovery(retryContext()).getResult()
         );
         assertEquals(
-            "binding",
-            handler.retryBindingRecovery(retryContext()).getResult()
+                "binding",
+                handler.retryBindingRecovery(retryContext()).getResult()
         );
         assertEquals(
-            "consumer",
-            handler.retryConsumerRecovery(retryContext()).getResult()
+                "consumer",
+                handler.retryConsumerRecovery(retryContext()).getResult()
         );
         verifyConditionsInvocation(times(2));
         verifyOperationsInvocation(times(2));
@@ -176,29 +176,29 @@ public class DefaultRetryHandlerTest {
     public void shouldThrowExceptionWhenRetryAttemptsIsExceeded() throws Exception {
         conditionsReturn(true);
         when(queueRecoveryRetryOperation.call(any(RetryContext.class)))
-            .thenThrow(new Exception());
+                .thenThrow(new Exception());
         when(exchangeRecoveryRetryOperation.call(any(RetryContext.class)))
-            .thenThrow(new Exception());
+                .thenThrow(new Exception());
         when(bindingRecoveryRetryOperation.call(any(RetryContext.class)))
-            .thenThrow(new Exception());
+                .thenThrow(new Exception());
         when(consumerRecoveryRetryOperation.call(any(RetryContext.class)))
-            .thenThrow(new Exception());
+                .thenThrow(new Exception());
         handler = handler(3);
         assertExceptionIsThrown(
-            "Retry exhausted, an exception should have been thrown",
-            () -> handler.retryQueueRecovery(retryContext())
+                "Retry exhausted, an exception should have been thrown",
+                () -> handler.retryQueueRecovery(retryContext())
         );
         assertExceptionIsThrown(
-            "Retry exhausted, an exception should have been thrown",
-            () -> handler.retryExchangeRecovery(retryContext())
+                "Retry exhausted, an exception should have been thrown",
+                () -> handler.retryExchangeRecovery(retryContext())
         );
         assertExceptionIsThrown(
-            "Retry exhausted, an exception should have been thrown",
-            () -> handler.retryBindingRecovery(retryContext())
+                "Retry exhausted, an exception should have been thrown",
+                () -> handler.retryBindingRecovery(retryContext())
         );
         assertExceptionIsThrown(
-            "Retry exhausted, an exception should have been thrown",
-            () -> handler.retryConsumerRecovery(retryContext())
+                "Retry exhausted, an exception should have been thrown",
+                () -> handler.retryConsumerRecovery(retryContext())
         );
         verifyConditionsInvocation(times(3));
         verifyOperationsInvocation(times(3));
@@ -215,13 +215,13 @@ public class DefaultRetryHandlerTest {
 
     private void conditionsReturn(boolean shouldRetry) {
         when(queueRecoveryRetryCondition.test(nullable(RecordedQueue.class), nullable(Exception.class)))
-            .thenReturn(shouldRetry);
+                .thenReturn(shouldRetry);
         when(exchangeRecoveryRetryCondition.test(nullable(RecordedExchange.class), nullable(Exception.class)))
-            .thenReturn(shouldRetry);
+                .thenReturn(shouldRetry);
         when(bindingRecoveryRetryCondition.test(nullable(RecordedBinding.class), nullable(Exception.class)))
-            .thenReturn(shouldRetry);
+                .thenReturn(shouldRetry);
         when(consumerRecoveryRetryCondition.test(nullable(RecordedConsumer.class), nullable(Exception.class)))
-            .thenReturn(shouldRetry);
+                .thenReturn(shouldRetry);
     }
 
     private void verifyConditionsInvocation(VerificationMode mode) {
@@ -244,12 +244,12 @@ public class DefaultRetryHandlerTest {
 
     private RetryHandler handler(int retryAttempts) {
         return new DefaultRetryHandler(
-            queueRecoveryRetryCondition, exchangeRecoveryRetryCondition,
-            bindingRecoveryRetryCondition, consumerRecoveryRetryCondition,
-            queueRecoveryRetryOperation, exchangeRecoveryRetryOperation,
-            bindingRecoveryRetryOperation, consumerRecoveryRetryOperation,
-            retryAttempts,
-            backoffPolicy);
+                queueRecoveryRetryCondition, exchangeRecoveryRetryCondition,
+                bindingRecoveryRetryCondition, consumerRecoveryRetryCondition,
+                queueRecoveryRetryOperation, exchangeRecoveryRetryOperation,
+                bindingRecoveryRetryOperation, consumerRecoveryRetryOperation,
+                retryAttempts,
+                backoffPolicy);
     }
 
     private RetryContext retryContext() {
@@ -259,7 +259,7 @@ public class DefaultRetryHandlerTest {
     private void checkBackoffSequence(int... sequence) throws InterruptedException {
         AtomicInteger count = new AtomicInteger(0);
         verify(backoffPolicy, times(sequence.length))
-            // for some reason Mockito calls the matchers twice as many times as the target method
-            .backoff(intThat(i -> i == sequence[count.getAndIncrement() % sequence.length]));
+                // for some reason Mockito calls the matchers twice as many times as the target method
+                .backoff(intThat(i -> i == sequence[count.getAndIncrement() % sequence.length]));
     }
 }

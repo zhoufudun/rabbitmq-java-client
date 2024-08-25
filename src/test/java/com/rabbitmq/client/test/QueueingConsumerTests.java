@@ -31,73 +31,79 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.QueueingConsumer;
 import com.rabbitmq.client.ShutdownSignalException;
 
-public class QueueingConsumerTests extends BrokerTestCase{
-  static final String QUEUE = "some-queue";
-  static final int THREADS = 5;
+public class QueueingConsumerTests extends BrokerTestCase {
+    static final String QUEUE = "some-queue";
+    static final int THREADS = 5;
 
-  @Test public void nThreadShutdown() throws Exception{
-    Channel channel = connection.createChannel();
-    final QueueingConsumer c = new QueueingConsumer(channel);
-    channel.queueDeclare(QUEUE, false, true, true, null);
-    channel.basicConsume(QUEUE, c);
-    final AtomicInteger count = new AtomicInteger(THREADS);
-    final CountDownLatch latch = new CountDownLatch(THREADS);
+    @Test
+    public void nThreadShutdown() throws Exception {
+        Channel channel = connection.createChannel();
+        final QueueingConsumer c = new QueueingConsumer(channel);
+        channel.queueDeclare(QUEUE, false, true, true, null);
+        channel.basicConsume(QUEUE, c);
+        final AtomicInteger count = new AtomicInteger(THREADS);
+        final CountDownLatch latch = new CountDownLatch(THREADS);
 
-    for(int i = 0; i < THREADS; i++){
-      new Thread(){
-        @Override public void run(){
-          try {
-            while(true){
-                c.nextDelivery();
-            }
-          } catch (ShutdownSignalException sig) {
-              count.decrementAndGet();
-          } catch (Exception e) {
-            throw new RuntimeException(e);
-          } finally {
-            latch.countDown();
-          }
+        for (int i = 0; i < THREADS; i++) {
+            new Thread() {
+                @Override
+                public void run() {
+                    try {
+                        while (true) {
+                            QueueingConsumer.Delivery delivery = c.nextDelivery();
+                        }
+                    } catch (ShutdownSignalException sig) {
+//                        c.nextDelivery() 会阻塞获取队列消息，如果过去到的是客户端关闭事件，他会抛出异常
+                        count.decrementAndGet();
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    } finally {
+                        latch.countDown();
+                    }
+                }
+            }.start();
         }
-      }.start();
+
+        connection.close();
+
+        // Far longer than this could reasonably take
+        assertTrue(latch.await(5, TimeUnit.SECONDS));
+        assertEquals(0, count.get());
+
+        Thread.sleep(100000);
     }
 
-    connection.close();
+    @Test
+    public void consumerCancellationInterruptsQueuingConsumerWait()
+            throws IOException, InterruptedException {
+        String queue = "cancel_notification_queue_for_queueing_consumer";
+        final BlockingQueue<Boolean> result = new ArrayBlockingQueue<Boolean>(1);
+        channel.queueDeclare(queue, false, true, false, null);
+        final QueueingConsumer consumer = new QueueingConsumer(channel);
+        Runnable receiver = new Runnable() {
 
-    // Far longer than this could reasonably take
-    assertTrue(latch.await(5, TimeUnit.SECONDS));
-    assertEquals(0, count.get());
-  }
-
-  @Test public void consumerCancellationInterruptsQueuingConsumerWait()
-      throws IOException, InterruptedException {
-    String queue = "cancel_notification_queue_for_queueing_consumer";
-    final BlockingQueue<Boolean> result = new ArrayBlockingQueue<Boolean>(1);
-    channel.queueDeclare(queue, false, true, false, null);
-    final QueueingConsumer consumer = new QueueingConsumer(channel);
-    Runnable receiver = new Runnable() {
-
-      public void run() {
-        try {
-          try {
-            consumer.nextDelivery();
-          } catch (ConsumerCancelledException e) {
-            result.put(true);
-            return;
-          } catch (ShutdownSignalException e) {
-          } catch (InterruptedException e) {
-          }
-          result.put(false);
-        } catch (InterruptedException e) {
-          fail();
-        }
-      }
-    };
-    Thread t = new Thread(receiver);
-    t.start();
-    channel.basicConsume(queue, consumer);
-    channel.queueDelete(queue);
-    assertTrue(result.take());
-    t.join();
-  }
+            public void run() {
+                try {
+                    try {
+                        consumer.nextDelivery();
+                    } catch (ConsumerCancelledException e) {
+                        result.put(true);
+                        return;
+                    } catch (ShutdownSignalException e) {
+                    } catch (InterruptedException e) {
+                    }
+                    result.put(false);
+                } catch (InterruptedException e) {
+                    fail();
+                }
+            }
+        };
+        Thread t = new Thread(receiver);
+        t.start();
+        channel.basicConsume(queue, consumer);
+        channel.queueDelete(queue);
+        assertTrue(result.take());
+        t.join();
+    }
 
 }

@@ -79,10 +79,12 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
     private final List<RecoveryListener> recoveryListeners = Collections.synchronizedList(new ArrayList<>());
     private final List<BlockedListener> blockedListeners = Collections.synchronizedList(new ArrayList<>());
 
-    // Records topology changes
+    // Records topology changes key=queue，value=队列具体信息
     private final Map<String, RecordedQueue> recordedQueues = Collections.synchronizedMap(new LinkedHashMap<>());
+    // 记录绑定关系
     private final List<RecordedBinding> recordedBindings = Collections.synchronizedList(new ArrayList<>());
     private final Map<String, RecordedExchange> recordedExchanges = Collections.synchronizedMap(new LinkedHashMap<>());
+    // 本客户端消费者信息，key=唯一订阅标识，value=消费者相关信息
     private final Map<String, RecordedConsumer> consumers = Collections.synchronizedMap(new LinkedHashMap<>());
     private final List<ConsumerRecoveryListener> consumerRecoveryListeners = Collections.synchronizedList(new ArrayList<>());
     private final List<QueueRecoveryListener> queueRecoveryListeners = Collections.synchronizedList(new ArrayList<>());

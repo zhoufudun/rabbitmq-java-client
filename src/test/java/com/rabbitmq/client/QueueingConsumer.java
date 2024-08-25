@@ -28,10 +28,10 @@ import com.rabbitmq.utility.Utility;
  * Convenience class: an implementation of {@link Consumer} with
  * straightforward blocking semantics. It is meant to be using in
  * tests.
- *
+ * <p>
  * Deprecated in favor of {@link DefaultConsumer} (see below for background).
  * Will be removed in next major release.
- *
+ * <p>
  * The general pattern for using QueueingConsumer is as follows:
  *
  * <pre>
@@ -87,7 +87,6 @@ import com.rabbitmq.utility.Utility;
  * As such, it is now safe to implement <code>Consumer</code> directly or
  * to extend <code>DefaultConsumer</code> and <code>QueueingConsumer</code>
  * is a lot less relevant.</p>
- *
  */
 public class QueueingConsumer extends DefaultConsumer {
     private final BlockingQueue<Delivery> _queue;
@@ -101,7 +100,7 @@ public class QueueingConsumer extends DefaultConsumer {
     // It is only there to wake up consumers. The canonical representation
     // of shutting down is the presence of _shutdown.
     // Invariant: This is never on _queue unless _shutdown != null.
-    private static final Delivery POISON = new Delivery(null, null, null);
+    private static final Delivery POISON = new Delivery(null, null, null); // 表征客户端关闭事件
 
     public QueueingConsumer(Channel ch) {
         this(ch, new LinkedBlockingQueue<Delivery>());
@@ -112,23 +111,25 @@ public class QueueingConsumer extends DefaultConsumer {
         this._queue = q;
     }
 
-    @Override public void handleShutdownSignal(String consumerTag,
-                                               ShutdownSignalException sig) {
+    @Override
+    public void handleShutdownSignal(String consumerTag,
+                                     ShutdownSignalException sig) {
         _shutdown = sig;
         _queue.add(POISON);
     }
 
-    @Override public void handleCancel(String consumerTag) throws IOException {
+    @Override
+    public void handleCancel(String consumerTag) throws IOException {
         _cancelled = new ConsumerCancelledException();
         _queue.add(POISON);
     }
 
-    @Override public void handleDelivery(String consumerTag,
+    @Override
+    public void handleDelivery(String consumerTag,
                                Envelope envelope,
                                AMQP.BasicProperties properties,
                                byte[] body)
-        throws IOException
-    {
+            throws IOException {
         checkShutdown();
         this._queue.add(new Delivery(envelope, properties, body));
     }
@@ -149,6 +150,7 @@ public class QueueingConsumer extends DefaultConsumer {
 
         /**
          * Retrieve the message envelope.
+         *
          * @return the message envelope
          */
         public Envelope getEnvelope() {
@@ -157,6 +159,7 @@ public class QueueingConsumer extends DefaultConsumer {
 
         /**
          * Retrieve the message properties.
+         *
          * @return the message properties
          */
         public BasicProperties getProperties() {
@@ -165,6 +168,7 @@ public class QueueingConsumer extends DefaultConsumer {
 
         /**
          * Retrieve the message body.
+         *
          * @return the message body
          */
         public byte[] getBody() {
@@ -193,13 +197,13 @@ public class QueueingConsumer extends DefaultConsumer {
      */
     private Delivery handle(Delivery delivery) {
         if (delivery == POISON ||
-            delivery == null && (_shutdown != null || _cancelled != null)) {
+                delivery == null && (_shutdown != null || _cancelled != null)) {
             if (delivery == POISON) {
                 _queue.add(POISON);
                 if (_shutdown == null && _cancelled == null) {
                     throw new IllegalStateException(
-                        "POISON in queue, but null _shutdown and null _cancelled. " +
-                        "This should never happen, please report as a BUG");
+                            "POISON in queue, but null _shutdown and null _cancelled. " +
+                                    "This should never happen, please report as a BUG");
                 }
             }
             if (null != _shutdown)
@@ -212,28 +216,28 @@ public class QueueingConsumer extends DefaultConsumer {
 
     /**
      * Main application-side API: wait for the next message delivery and return it.
+     * 阻塞等待消息
      * @return the next message
-     * @throws InterruptedException if an interrupt is received while waiting
-     * @throws ShutdownSignalException if the connection is shut down while waiting
+     * @throws InterruptedException       if an interrupt is received while waiting
+     * @throws ShutdownSignalException    if the connection is shut down while waiting
      * @throws ConsumerCancelledException if this consumer is cancelled while waiting
      */
     public Delivery nextDelivery()
-        throws InterruptedException, ShutdownSignalException, ConsumerCancelledException
-    {
+            throws InterruptedException, ShutdownSignalException, ConsumerCancelledException {
         return handle(_queue.take());
     }
 
     /**
      * Main application-side API: wait for the next message delivery and return it.
+     *
      * @param timeout timeout in millisecond
      * @return the next message or null if timed out
-     * @throws InterruptedException if an interrupt is received while waiting
-     * @throws ShutdownSignalException if the connection is shut down while waiting
+     * @throws InterruptedException       if an interrupt is received while waiting
+     * @throws ShutdownSignalException    if the connection is shut down while waiting
      * @throws ConsumerCancelledException if this consumer is cancelled while waiting
      */
     public Delivery nextDelivery(long timeout)
-        throws InterruptedException, ShutdownSignalException, ConsumerCancelledException
-    {
+            throws InterruptedException, ShutdownSignalException, ConsumerCancelledException {
         return handle(_queue.poll(timeout, TimeUnit.MILLISECONDS));
     }
 }
