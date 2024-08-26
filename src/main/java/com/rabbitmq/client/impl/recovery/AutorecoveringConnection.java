@@ -1070,7 +1070,7 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
     }
 
     void deleteRecordedQueue(String queue) {
-        this.recordedQueues.remove(queue);
+        this.recordedQueues.remove(queue); // 移除本地缓存
         Set<RecordedBinding> xs = this.removeBindingsWithDestination(queue);
         for (RecordedBinding b : xs) {
             this.maybeDeleteRecordedAutoDeleteExchange(b.getSource());
@@ -1174,7 +1174,7 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
         synchronized (this.recordedBindings) {
             for (Iterator<RecordedBinding> it = this.recordedBindings.iterator(); it.hasNext(); ) {
                 RecordedBinding b = it.next();
-                if (b.getDestination().equals(s)) {
+                if (b.getDestination().equals(s)) { // 获取RecordedBinding中目标队列名称是否与传入的队列名称相同，相同删除
                     it.remove();
                     result.add(b);
                 }

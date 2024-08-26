@@ -120,8 +120,8 @@ public class QueueingConsumer extends DefaultConsumer {
 
     @Override
     public void handleCancel(String consumerTag) throws IOException {
-        _cancelled = new ConsumerCancelledException();
-        _queue.add(POISON);
+        _cancelled = new ConsumerCancelledException(); // 设置消费者取消订阅异常
+        _queue.add(POISON); // 取消订阅消息加入队列，通知消费者取消订阅
     }
 
     @Override

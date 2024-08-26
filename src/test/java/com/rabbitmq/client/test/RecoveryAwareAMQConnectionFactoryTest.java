@@ -35,10 +35,14 @@ import java.util.concurrent.TimeoutException;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.Mockito.*;
 
+/**
+ * read
+ */
 public class RecoveryAwareAMQConnectionFactoryTest {
 
     // see https://github.com/rabbitmq/rabbitmq-java-client/issues/262
-    @Test public void tryNextAddressIfTimeoutException() throws IOException, TimeoutException {
+    @Test
+    public void tryNextAddressIfTimeoutException() throws IOException, TimeoutException {
         final RecoveryAwareAMQConnection connectionThatThrowsTimeout = mock(RecoveryAwareAMQConnection.class);
         final RecoveryAwareAMQConnection connectionThatSucceeds = mock(RecoveryAwareAMQConnection.class);
         final Queue<RecoveryAwareAMQConnection> connections = new ArrayBlockingQueue<RecoveryAwareAMQConnection>(10);
@@ -46,8 +50,7 @@ public class RecoveryAwareAMQConnectionFactoryTest {
         connections.add(connectionThatSucceeds);
         AddressResolver addressResolver = () -> Arrays.asList(new Address("host1"), new Address("host2"));
         RecoveryAwareAMQConnectionFactory connectionFactory = new RecoveryAwareAMQConnectionFactory(
-            new ConnectionParams(), mock(FrameHandlerFactory.class), addressResolver
-        ) {
+                new ConnectionParams(), mock(FrameHandlerFactory.class), addressResolver) {
             @Override
             protected RecoveryAwareAMQConnection createConnection(ConnectionParams params, FrameHandler handler, MetricsCollector metricsCollector) {
                 return connections.poll();

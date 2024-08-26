@@ -423,7 +423,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
                 // so return false
                 return false;
             } else if (method instanceof Basic.Cancel) {
-                Basic.Cancel m = (Basic.Cancel) method;
+                Basic.Cancel m = (Basic.Cancel) method; // 客户端删除队列，服务端会回复Cancel消息：#method<basic.cancel>(consumer-tag=amq.ctag-OCKYz2h72uwSAaDVpGNOTA, nowait=true)
                 String consumerTag = m.getConsumerTag();
                 Consumer callback = _consumers.remove(consumerTag);
                 // Not finding any matching consumer isn't necessarily an indication of an issue anywhere.
@@ -1145,7 +1145,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
                         .ifUnused(ifUnused)
                         .ifEmpty(ifEmpty)
                         .build())
-                        .getMethod();
+                        .getMethod(); // 构造一个删除队列的命令
     }
 
     @Override

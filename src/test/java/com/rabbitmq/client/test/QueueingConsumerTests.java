@@ -17,7 +17,7 @@ package com.rabbitmq.client.test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.rabbitmq.client.ConsumerCancelledException;
+import com.rabbitmq.client.*;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -27,10 +27,9 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.QueueingConsumer;
-import com.rabbitmq.client.ShutdownSignalException;
-
+/**
+ * read
+ */
 public class QueueingConsumerTests extends BrokerTestCase {
     static final String QUEUE = "some-queue";
     static final int THREADS = 5;
@@ -80,28 +79,26 @@ public class QueueingConsumerTests extends BrokerTestCase {
         final BlockingQueue<Boolean> result = new ArrayBlockingQueue<Boolean>(1);
         channel.queueDeclare(queue, false, true, false, null);
         final QueueingConsumer consumer = new QueueingConsumer(channel);
-        Runnable receiver = new Runnable() {
-
-            public void run() {
+        Runnable receiver = () -> {
+            try {
                 try {
-                    try {
-                        consumer.nextDelivery();
-                    } catch (ConsumerCancelledException e) {
-                        result.put(true);
-                        return;
-                    } catch (ShutdownSignalException e) {
-                    } catch (InterruptedException e) {
-                    }
-                    result.put(false);
+                    consumer.nextDelivery();
+                } catch (ConsumerCancelledException e) {
+                    result.put(true);
+                    return;
+                } catch (ShutdownSignalException e) {
                 } catch (InterruptedException e) {
-                    fail();
                 }
+                result.put(false);
+            } catch (InterruptedException e) {
+                fail();
             }
         };
         Thread t = new Thread(receiver);
         t.start();
         channel.basicConsume(queue, consumer);
-        channel.queueDelete(queue);
+        AMQP.Queue.DeleteOk deleteOk = channel.queueDelete(queue);
+        System.out.println(deleteOk);
         assertTrue(result.take());
         t.join();
     }

@@ -84,7 +84,7 @@ final public class ConsumerWorkService {
     }
 
     public void addWork(Channel channel, Runnable runnable) {
-        if (this.workPool.addWorkItem(channel, runnable)) {
+        if (this.workPool.addWorkItem(channel, runnable)) { // 将客户端的Runnable加入绑定的唯一队列，在启动一个线程统一消费
             this.executor.execute(new WorkPoolRunnable()); // 提交一个任务，他可以处理一批客户端的消息
         }
     }
