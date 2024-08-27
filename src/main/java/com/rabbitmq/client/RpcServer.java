@@ -23,18 +23,27 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
+ * ，RpcServer 类是一个用于处理RPC请求的通用类，它不关心RPC调用的具体实现细节，只负责管理请求队列和调用的流程
  * Class which manages a request queue for a simple RPC-style service.
  * The class is agnostic about the format of RPC arguments / return values.
-*/
+ */
 public class RpcServer {
-    /** Channel we are communicating on */
+    /**
+     * Channel we are communicating on
+     */
     private final Channel _channel;
-    /** Queue to receive requests from */
+    /**
+     * Queue to receive requests from
+     */
     private final String _queueName;
-    /** Boolean controlling the exit from the mainloop. */
+    /**
+     * Boolean controlling the exit from the mainloop.
+     */
     private volatile boolean _mainloopRunning = true;
 
-    /** Consumer attached to our request queue */
+    /**
+     * Consumer attached to our request queue
+     */
     private RpcConsumer _consumer;
 
     /**
@@ -42,8 +51,7 @@ public class RpcServer {
      * autodelete queue.
      */
     public RpcServer(Channel channel)
-        throws IOException
-    {
+            throws IOException {
         this(channel, null);
     }
 
@@ -53,13 +61,12 @@ public class RpcServer {
      * the queue to have already been declared.
      */
     public RpcServer(Channel channel, String queueName)
-        throws IOException
-    {
+            throws IOException {
         _channel = channel;
         if (queueName == null || queueName.equals("")) {
-            _queueName = _channel.queueDeclare().getQueue();
+            _queueName = _channel.queueDeclare().getQueue(); // 获取队列名称
         } else {
-            _queueName = queueName;
+            _queueName = queueName; // rpc.queue
         }
         _consumer = setupConsumer();
     }
@@ -67,11 +74,11 @@ public class RpcServer {
     /**
      * Public API - cancels the consumer, thus deleting the queue, if
      * it was a temporary queue, and marks the RpcServer as closed.
+     *
      * @throws IOException if an error is encountered
      */
     public void close()
-        throws IOException
-    {
+            throws IOException {
         if (_consumer != null) {
             _channel.basicCancel(_consumer.getConsumerTag());
             _consumer = null;
@@ -81,14 +88,15 @@ public class RpcServer {
 
     /**
      * Registers a consumer on the reply queue.
-     * @throws IOException if an error is encountered
+     * 在指定队列上注册一个消费者
+     *
      * @return the newly created and registered consumer
+     * @throws IOException if an error is encountered
      */
     protected RpcConsumer setupConsumer()
-        throws IOException
-    {
-        RpcConsumer consumer = new DefaultRpcConsumer(_channel);
-        _channel.basicConsume(_queueName, consumer);
+            throws IOException {
+        RpcConsumer consumer = new DefaultRpcConsumer(_channel); // 构建一个用户存放rpc请求的消费者
+        _channel.basicConsume(_queueName, consumer); // channel（Server端）订阅指定队列的消息
         return consumer;
     }
 
@@ -98,17 +106,17 @@ public class RpcServer {
      * (or its underlying Connection) is shut down, or until
      * terminateMainloop() is called, or until the thread running the loop
      * is interrupted.
-     *
+     * <p>
      * Note that if the mainloop is blocked waiting for a request, the
      * termination flag is not checked until a request is received, so
      * a good time to call terminateMainloop() is during a request
      * handler.
+     * 主线循环线程用于处理，服务端发来的消息
      *
      * @return the exception that signalled the Channel shutdown, or null for orderly shutdown
      */
     public ShutdownSignalException mainloop()
-        throws IOException
-    {
+            throws IOException {
         try {
             while (_mainloopRunning) {
                 Delivery request;
@@ -130,7 +138,7 @@ public class RpcServer {
 
     /**
      * Call this method to terminate the mainloop.
-     *
+     * <p>
      * Note that if the mainloop is blocked waiting for a request, the
      * termination flag is not checked until a request is received, so
      * a good time to call terminateMainloop() is during a request
@@ -144,19 +152,17 @@ public class RpcServer {
      * Private API - Process a single request. Called from mainloop().
      */
     public void processRequest(Delivery request)
-        throws IOException
-    {
+            throws IOException {
         AMQP.BasicProperties requestProperties = request.getProperties();
         String correlationId = requestProperties.getCorrelationId();
-        String replyTo = requestProperties.getReplyTo();
-        if (correlationId != null && replyTo != null)
-        {
+        String replyTo = requestProperties.getReplyTo(); // replyTo理解为服务端收到了请求，需要将处理后的请求应答给哪个客户端
+        if (correlationId != null && replyTo != null) {
             AMQP.BasicProperties.Builder replyPropertiesBuilder
-                = new AMQP.BasicProperties.Builder().correlationId(correlationId);
+                    = new AMQP.BasicProperties.Builder().correlationId(correlationId);
             AMQP.BasicProperties replyProperties = preprocessReplyProperties(request, replyPropertiesBuilder);
             byte[] replyBody = handleCall(request, replyProperties);
             replyProperties = postprocessReplyProperties(request, replyProperties.builder());
-            _channel.basicPublish("", replyTo, replyProperties, replyBody);
+            _channel.basicPublish("", replyTo, replyProperties, replyBody); // 应答消息通过发布消息给服务端，客户端订阅队列消息接受应答
         } else {
             handleCast(request);
         }
@@ -167,11 +173,10 @@ public class RpcServer {
      * handleCall(AMQP.BasicProperties,byte[],AMQP.BasicProperties).
      */
     public byte[] handleCall(Delivery request,
-                             AMQP.BasicProperties replyProperties)
-    {
+                             AMQP.BasicProperties replyProperties) {
         return handleCall(request.getProperties(),
-                          request.getBody(),
-                          replyProperties);
+                request.getBody(),
+                replyProperties);
     }
 
     /**
@@ -180,8 +185,7 @@ public class RpcServer {
      */
     public byte[] handleCall(AMQP.BasicProperties requestProperties,
                              byte[] requestBody,
-                             AMQP.BasicProperties replyProperties)
-    {
+                             AMQP.BasicProperties replyProperties) {
         return handleCall(requestBody, replyProperties);
     }
 
@@ -191,14 +195,14 @@ public class RpcServer {
      * methods) in subclasses.
      */
     public byte[] handleCall(byte[] requestBody,
-                             AMQP.BasicProperties replyProperties)
-    {
+                             AMQP.BasicProperties replyProperties) {
         return new byte[0];
     }
 
     /**
      * Gives a chance to set/modify reply properties before handling call.
      * Note the correlationId property is already set.
+     *
      * @param request the inbound message
      * @param builder the reply properties builder
      * @return the properties to pass in to the handling call
@@ -209,6 +213,7 @@ public class RpcServer {
 
     /**
      * Gives a chance to set/modify reply properties after the handling call
+     *
      * @param request the inbound message
      * @param builder the reply properties builder
      * @return the properties to pass in to the response message
@@ -221,8 +226,7 @@ public class RpcServer {
      * Lowest-level handler method. Calls
      * handleCast(AMQP.BasicProperties,byte[]).
      */
-    public void handleCast(Delivery request)
-    {
+    public void handleCast(Delivery request) {
         handleCast(request.getProperties(), request.getBody());
     }
 
@@ -230,8 +234,7 @@ public class RpcServer {
      * Mid-level handler method. Calls
      * handleCast(byte[]).
      */
-    public void handleCast(AMQP.BasicProperties requestProperties, byte[] requestBody)
-    {
+    public void handleCast(AMQP.BasicProperties requestProperties, byte[] requestBody) {
         handleCast(requestBody);
     }
 
@@ -240,13 +243,13 @@ public class RpcServer {
      * this (or other handleCast and handleCast methods) in
      * subclasses.
      */
-    public void handleCast(byte[] requestBody)
-    {
+    public void handleCast(byte[] requestBody) {
         // Does nothing.
     }
 
     /**
      * Retrieve the channel.
+     *
      * @return the channel to which this server is connected
      */
     public Channel getChannel() {
@@ -255,6 +258,7 @@ public class RpcServer {
 
     /**
      * Retrieve the queue name.
+     *
      * @return the queue which this server is consuming from
      */
     public String getQueueName() {
@@ -298,7 +302,7 @@ public class RpcServer {
 
         @Override
         public void handleShutdownSignal(String consumerTag,
-            ShutdownSignalException sig) {
+                                         ShutdownSignalException sig) {
             _shutdown = sig;
             _queue.add(POISON);
         }
@@ -311,10 +315,10 @@ public class RpcServer {
 
         @Override
         public void handleDelivery(String consumerTag,
-            Envelope envelope,
-            AMQP.BasicProperties properties,
-            byte[] body)
-            throws IOException {
+                                   Envelope envelope,
+                                   AMQP.BasicProperties properties,
+                                   byte[] body)
+                throws IOException {
             checkShutdown();
             this._queue.add(new Delivery(envelope, properties, body));
         }
@@ -340,13 +344,13 @@ public class RpcServer {
          */
         private Delivery handle(Delivery delivery) {
             if (delivery == POISON ||
-                delivery == null && (_shutdown != null || _cancelled != null)) {
+                    delivery == null && (_shutdown != null || _cancelled != null)) {
                 if (delivery == POISON) {
                     _queue.add(POISON);
                     if (_shutdown == null && _cancelled == null) {
                         throw new IllegalStateException(
-                            "POISON in queue, but null _shutdown and null _cancelled. " +
-                                "This should never happen, please report as a BUG");
+                                "POISON in queue, but null _shutdown and null _cancelled. " +
+                                        "This should never happen, please report as a BUG");
                     }
                 }
                 if (null != _shutdown)

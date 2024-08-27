@@ -43,26 +43,42 @@ import org.slf4j.LoggerFactory;
  * The class is agnostic about the format of RPC arguments / return values.
  * It simply provides a mechanism for sending a message to an exchange with a given routing key,
  * and waiting for a response.
-*/
+ */
 public class RpcClient implements AutoCloseable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RpcClient.class);
 
-    /** Channel we are communicating on */
+    /**
+     * Channel we are communicating on
+     */
     private final Channel _channel;
-    /** Exchange to send requests to */
+    /**
+     * Exchange to send requests to
+     */
     private final String _exchange;
-    /** Routing key to use for requests */
+    /**
+     * Routing key to use for requests
+     */
     private final String _routingKey;
-    /** Queue where the server should put the reply */
+    /**
+     * Queue where the server should put the reply
+     */
     private final String _replyTo;
-    /** timeout to use on call responses */
+    /**
+     * timeout to use on call responses
+     */
     private final int _timeout;
-    /** NO_TIMEOUT value must match convention on {@link BlockingCell#uninterruptibleGet(int)} */
+    /**
+     * NO_TIMEOUT value must match convention on {@link BlockingCell#uninterruptibleGet(int)}
+     */
     protected final static int NO_TIMEOUT = -1;
-    /** Whether to publish RPC requests with the mandatory flag or not. */
+    /**
+     * Whether to publish RPC requests with the mandatory flag or not.
+     */
     private final boolean _useMandatory;
-    /** closed flag */
+    /**
+     * closed flag
+     */
     private final AtomicBoolean closed = new AtomicBoolean(false);
 
     public final static Function<Object, Response> DEFAULT_REPLY_HANDLER = reply -> {
@@ -84,7 +100,9 @@ public class RpcClient implements AutoCloseable {
 
     private final Function<Object, Response> _replyHandler;
 
-    /** Map from request correlation ID to continuation BlockingCell */
+    /**
+     * Map from request correlation ID to continuation BlockingCell
+     */
     private final Map<String, BlockingCell<Object>> _continuationMap = new HashMap<String, BlockingCell<Object>>();
 
     /**
@@ -97,7 +115,9 @@ public class RpcClient implements AutoCloseable {
 
     private String lastCorrelationId = "0";
 
-    /** Consumer attached to our reply queue */
+    /**
+     * Consumer attached to our reply queue
+     */
     private final DefaultConsumer _consumer;
 
     /**
@@ -110,19 +130,19 @@ public class RpcClient implements AutoCloseable {
      */
     public RpcClient(RpcClientParams params) throws
             IOException {
-        _channel = params.getChannel();
-        _exchange = params.getExchange();
-        _routingKey = params.getRoutingKey();
-        _replyTo = params.getReplyTo();
+        _channel = params.getChannel(); // AMQChannel(amqp://guest@0:0:0:0:0:0:0:1:5672//zfdtest,1)
+        _exchange = params.getExchange();//""
+        _routingKey = params.getRoutingKey();// rpc.queue
+        _replyTo = params.getReplyTo(); // amq.rabbitmq.reply-to
         if (params.getTimeout() < NO_TIMEOUT) {
             throw new IllegalArgumentException("Timeout argument must be NO_TIMEOUT(-1) or non-negative.");
         }
-        _timeout = params.getTimeout();
-        _useMandatory = params.shouldUseMandatory();
-        _replyHandler = params.getReplyHandler();
+        _timeout = params.getTimeout(); // 1000
+        _useMandatory = params.shouldUseMandatory(); // false
+        _replyHandler = params.getReplyHandler(); // 服务端回复后消息处理组件
         _correlationIdSupplier = params.getCorrelationIdSupplier();
 
-        _consumer = setupConsumer();
+        _consumer = setupConsumer(); // 注册消费者
         if (_useMandatory) {
             this._returnListener = this._channel.addReturnListener(returnMessage -> {
                 synchronized (_continuationMap) {
@@ -144,6 +164,7 @@ public class RpcClient implements AutoCloseable {
 
     /**
      * Private API - ensures the RpcClient is correctly open.
+     *
      * @throws IOException if an error is encountered
      */
     private void checkNotClosed() throws IOException {
@@ -154,6 +175,7 @@ public class RpcClient implements AutoCloseable {
 
     /**
      * Public API - cancels the consumer, thus deleting the temporary queue, and marks the RpcClient as closed.
+     *
      * @throws IOException if an error is encountered
      */
     @Override
@@ -168,8 +190,9 @@ public class RpcClient implements AutoCloseable {
 
     /**
      * Registers a consumer on the reply queue.
-     * @throws IOException if an error is encountered
+     *
      * @return the newly created and registered consumer
+     * @throws IOException if an error is encountered
      */
     protected DefaultConsumer setupConsumer() throws IOException {
         DefaultConsumer consumer = new DefaultConsumer(_channel) {
@@ -191,7 +214,7 @@ public class RpcClient implements AutoCloseable {
                                        byte[] body) {
                 synchronized (_continuationMap) {
                     String replyId = properties.getCorrelationId();
-                    BlockingCell<Object> blocker =_continuationMap.remove(replyId);
+                    BlockingCell<Object> blocker = _continuationMap.remove(replyId);
                     if (blocker == null) {
                         // Entry should have been removed if request timed out,
                         // log a warning nevertheless.
@@ -202,31 +225,31 @@ public class RpcClient implements AutoCloseable {
                 }
             }
         };
-        _channel.basicConsume(_replyTo, true, consumer);
+        // 定义特定的队列
+        _channel.basicConsume(_replyTo, true, consumer); // replyTo就是一个队列：amq.rabbitmq.reply-to
         return consumer;
     }
 
     public void publish(AMQP.BasicProperties props, byte[] message)
-        throws IOException
-    {
+            throws IOException {
         _channel.basicPublish(_exchange, _routingKey, _useMandatory, props, message);
     }
 
     public Response doCall(AMQP.BasicProperties props, byte[] message)
-        throws IOException, TimeoutException {
+            throws IOException, TimeoutException {
         return doCall(props, message, _timeout);
     }
 
     public Response doCall(AMQP.BasicProperties props, byte[] message, int timeout)
-        throws IOException, ShutdownSignalException, TimeoutException {
+            throws IOException, ShutdownSignalException, TimeoutException {
         checkNotClosed();
         BlockingCell<Object> k = new BlockingCell<Object>();
         String replyId;
         synchronized (_continuationMap) {
             replyId = _correlationIdSupplier.get();
             lastCorrelationId = replyId;
-            props = ((props==null) ? new AMQP.BasicProperties.Builder() : props.builder())
-                .correlationId(replyId).replyTo(_replyTo).build();
+            props = ((props == null) ? new AMQP.BasicProperties.Builder() : props.builder())
+                    .correlationId(replyId).replyTo(_replyTo).build();
             _continuationMap.put(replyId, k);
         }
         publish(props, message);
@@ -242,40 +265,39 @@ public class RpcClient implements AutoCloseable {
     }
 
     public byte[] primitiveCall(AMQP.BasicProperties props, byte[] message)
-        throws IOException, ShutdownSignalException, TimeoutException
-    {
+            throws IOException, ShutdownSignalException, TimeoutException {
         return primitiveCall(props, message, _timeout);
     }
 
     public byte[] primitiveCall(AMQP.BasicProperties props, byte[] message, int timeout)
-        throws IOException, ShutdownSignalException, TimeoutException
-    {
+            throws IOException, ShutdownSignalException, TimeoutException {
         return doCall(props, message, timeout).getBody();
     }
 
     /**
      * Perform a simple byte-array-based RPC roundtrip.
+     *
      * @param message the byte array request message to send
      * @return the byte array response received
      * @throws ShutdownSignalException if the connection dies during our wait
-     * @throws IOException if an error is encountered
-     * @throws TimeoutException if a response is not received within the configured timeout
+     * @throws IOException             if an error is encountered
+     * @throws TimeoutException        if a response is not received within the configured timeout
      */
     public byte[] primitiveCall(byte[] message)
-        throws IOException, ShutdownSignalException, TimeoutException {
+            throws IOException, ShutdownSignalException, TimeoutException {
         return primitiveCall(null, message);
     }
 
     /**
      * Perform a simple byte-array-based RPC roundtrip
-     *
+     * <p>
      * Useful if you need to get at more than just the body of the message
      *
      * @param message the byte array request message to send
      * @return The response object is an envelope that contains all of the data provided to the `handleDelivery` consumer
      * @throws ShutdownSignalException if the connection dies during our wait
-     * @throws IOException if an error is encountered
-     * @throws TimeoutException if a response is not received within the configured timeout
+     * @throws IOException             if an error is encountered
+     * @throws TimeoutException        if a response is not received within the configured timeout
      */
     public Response responseCall(byte[] message) throws IOException, ShutdownSignalException, TimeoutException {
         return responseCall(message, _timeout);
@@ -283,15 +305,15 @@ public class RpcClient implements AutoCloseable {
 
     /**
      * Perform a simple byte-array-based RPC roundtrip
-     *
+     * <p>
      * Useful if you need to get at more than just the body of the message
      *
      * @param message the byte array request message to send
      * @param timeout milliseconds before timing out on wait for response
      * @return The response object is an envelope that contains all of the data provided to the `handleDelivery` consumer
      * @throws ShutdownSignalException if the connection dies during our wait
-     * @throws IOException if an error is encountered
-     * @throws TimeoutException if a response is not received within the configured timeout
+     * @throws IOException             if an error is encountered
+     * @throws TimeoutException        if a response is not received within the configured timeout
      */
     public Response responseCall(byte[] message, int timeout) throws IOException, ShutdownSignalException, TimeoutException {
         return doCall(null, message, timeout);
@@ -299,16 +321,16 @@ public class RpcClient implements AutoCloseable {
 
     /**
      * Perform a simple string-based RPC roundtrip.
+     *
      * @param message the string request message to send
      * @return the string response received
      * @throws ShutdownSignalException if the connection dies during our wait
-     * @throws IOException if an error is encountered
-     * @throws TimeoutException if a timeout occurs before the response is received
+     * @throws IOException             if an error is encountered
+     * @throws TimeoutException        if a timeout occurs before the response is received
      */
     @SuppressWarnings("unused")
     public String stringCall(String message)
-        throws IOException, ShutdownSignalException, TimeoutException
-    {
+            throws IOException, ShutdownSignalException, TimeoutException {
         byte[] request;
         try {
             request = message.getBytes(StringRpcServer.STRING_ENCODING);
@@ -319,13 +341,13 @@ public class RpcClient implements AutoCloseable {
         try {
             return new String(reply, StringRpcServer.STRING_ENCODING);
         } catch (IOException _e) {
-           return new String(reply);
+            return new String(reply);
         }
     }
 
     /**
      * Perform an AMQP wire-protocol-table based RPC roundtrip <br><br>
-     *
+     * <p>
      * There are some restrictions on the values appearing in the table: <br>
      * they must be of type {@link String}, {@link LongString}, {@link Integer}, {@link java.math.BigDecimal}, {@link Date},
      * or (recursively) a {@link Map} of the enclosing type.
@@ -333,19 +355,18 @@ public class RpcClient implements AutoCloseable {
      * @param message the table to send
      * @return the table received
      * @throws ShutdownSignalException if the connection dies during our wait
-     * @throws IOException if an error is encountered
-     * @throws TimeoutException if a timeout occurs before a response is received
+     * @throws IOException             if an error is encountered
+     * @throws TimeoutException        if a timeout occurs before a response is received
      */
     public Map<String, Object> mapCall(Map<String, Object> message)
-        throws IOException, ShutdownSignalException, TimeoutException
-    {
+            throws IOException, ShutdownSignalException, TimeoutException {
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         MethodArgumentWriter writer = new MethodArgumentWriter(new ValueWriter(new DataOutputStream(buffer)));
         writer.writeTable(message);
         writer.flush();
         byte[] reply = primitiveCall(buffer.toByteArray());
         MethodArgumentReader reader =
-            new MethodArgumentReader(new ValueReader(new DataInputStream(new ByteArrayInputStream(reply))));
+                new MethodArgumentReader(new ValueReader(new DataInputStream(new ByteArrayInputStream(reply))));
         return reader.readTable();
     }
 
@@ -359,12 +380,11 @@ public class RpcClient implements AutoCloseable {
      * @param keyValuePairs alternating {key, value, key, value, ...} data to send
      * @return the table received
      * @throws ShutdownSignalException if the connection dies during our wait
-     * @throws IOException if an error is encountered
-     * @throws TimeoutException if a timeout occurs before a response is received
+     * @throws IOException             if an error is encountered
+     * @throws TimeoutException        if a timeout occurs before a response is received
      */
     public Map<String, Object> mapCall(Object[] keyValuePairs)
-        throws IOException, ShutdownSignalException, TimeoutException
-    {
+            throws IOException, ShutdownSignalException, TimeoutException {
         Map<String, Object> message = new HashMap<String, Object>();
         for (int i = 0; i < keyValuePairs.length; i += 2) {
             message.put((String) keyValuePairs[i], keyValuePairs[i + 1]);
@@ -374,6 +394,7 @@ public class RpcClient implements AutoCloseable {
 
     /**
      * Retrieve the channel.
+     *
      * @return the channel to which this client is connected
      */
     public Channel getChannel() {
@@ -382,6 +403,7 @@ public class RpcClient implements AutoCloseable {
 
     /**
      * Retrieve the exchange.
+     *
      * @return the exchange to which this client is connected
      */
     public String getExchange() {
@@ -390,6 +412,7 @@ public class RpcClient implements AutoCloseable {
 
     /**
      * Retrieve the routing key.
+     *
      * @return the routing key for messages to this client
      */
     public String getRoutingKey() {
@@ -398,6 +421,7 @@ public class RpcClient implements AutoCloseable {
 
     /**
      * Retrieve the continuation map.
+     *
      * @return the map of objects to blocking cells for this client
      */
     public Map<String, BlockingCell<Object>> getContinuationMap() {
@@ -424,6 +448,7 @@ public class RpcClient implements AutoCloseable {
 
     /**
      * Retrieve the consumer.
+     *
      * @return an interface to the client's consumer object
      */
     public Consumer getConsumer() {
@@ -443,8 +468,8 @@ public class RpcClient implements AutoCloseable {
         }
 
         public Response(
-            final String consumerTag, final Envelope envelope, final AMQP.BasicProperties properties,
-            final byte[] body) {
+                final String consumerTag, final Envelope envelope, final AMQP.BasicProperties properties,
+                final byte[] body) {
             this.consumerTag = consumerTag;
             this.envelope = envelope;
             this.properties = properties;

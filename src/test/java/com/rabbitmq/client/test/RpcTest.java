@@ -72,17 +72,18 @@ public class RpcTest {
 
     @Test
     public void rpc() throws Exception {
-        rpcServer = new TestRpcServer(serverChannel, queue);
+        rpcServer = new TestRpcServer(serverChannel, queue); // 理解为一个RPCServer
         new Thread(() -> {
             try {
-                rpcServer.mainloop();
+                rpcServer.mainloop(); // 类比为服务端开始消费（接受客户端的请求）
             } catch (Exception e) {
                 // safe to ignore when loops ends/server is canceled
             }
         }).start();
+        // 类比为客户端发送请求到服务端
         RpcClient client = new RpcClient(new RpcClientParams()
                 .channel(clientChannel).exchange("").routingKey(queue).timeout(1000));
-        RpcClient.Response response = client.doCall(null, "hello".getBytes());
+        RpcClient.Response response = client.doCall(null, "hello".getBytes()); // 向队列发送消息
         assertEquals("*** hello ***", new String(response.getBody()));
         assertEquals("pre-hello", response.getProperties().getHeaders().get("pre").toString());
         assertEquals("post-hello", response.getProperties().getHeaders().get("post").toString());
@@ -307,7 +308,8 @@ public class RpcTest {
         }
     }
 
-    @Test public void interruptingServerThreadShouldStopIt() throws Exception {
+    @Test
+    public void interruptingServerThreadShouldStopIt() throws Exception {
         rpcServer = new TestRpcServer(serverChannel, queue);
         Thread serverThread = new Thread(() -> {
             try {
