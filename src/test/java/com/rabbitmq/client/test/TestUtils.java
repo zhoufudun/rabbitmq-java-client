@@ -177,7 +177,7 @@ public class TestUtils {
             throws IOException, TimeoutException, InterruptedException {
         Channel ch = c.createChannel();
         try {
-            ch.confirmSelect();
+            ch.confirmSelect(); // 开启消息确认模式。在这种模式下，发送的每一条消息都会被确认
             final CountDownLatch latch = new CountDownLatch(1);
             ch.basicConsume(queue, true, new DefaultConsumer(ch) {
 
@@ -187,7 +187,7 @@ public class TestUtils {
                 }
             });
             ch.basicPublish(exchange, routingKey, null, "".getBytes());
-            ch.waitForConfirmsOrDie(5000);
+            ch.waitForConfirmsOrDie(5000);  // 等待所有消息被确认，或者等待5000毫秒后如果还没有确认则抛出异常
             return latch.await(5, TimeUnit.SECONDS);
         } finally {
             if (ch != null && ch.isOpen()) {
@@ -240,7 +240,10 @@ public class TestUtils {
 
     public static void closeAndWaitForRecovery(RecoverableConnection connection) throws IOException, InterruptedException {
         CountDownLatch latch = prepareForRecovery(connection);
-        Host.closeConnection((NetworkConnection) connection);
+
+        // 手动杀进程
+//        Host.closeConnection((NetworkConnection) connection);
+        connection.close();
         wait(latch);
     }
 

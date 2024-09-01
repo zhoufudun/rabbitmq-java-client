@@ -28,7 +28,8 @@ public class MultiThreadedChannel extends BrokerTestCase {
 
     private static final String DUMMY_EXCHANGE_NAME = "dummy.exchange";
 
-    @Test public void interleavedRpcs() throws Throwable {
+    @Test
+    public void interleavedRpcs() throws Throwable {
 
         final AtomicReference<Throwable> throwableRef = new AtomicReference<Throwable>(null);
 
@@ -59,6 +60,7 @@ public class MultiThreadedChannel extends BrokerTestCase {
 
         queueDeclare.start();
         exchangeDeclare.start();
+
         queueDeclare.join();
         exchangeDeclare.join();
 

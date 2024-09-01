@@ -62,6 +62,13 @@ public class RpcClient implements AutoCloseable {
     private final String _routingKey;
     /**
      * Queue where the server should put the reply
+     *
+     * _replyTo 在 AMQP（高级消息队列协议）中是一个非常重要的概念，特别是在 RPC（远程过程调用）模式中。在这段 Java 代码中，_replyTo 是 RpcClientParams 对象的一个属性，它定义了用于接收服务器响应的队列名称。
+     * 当客户端向服务器发送 RPC 请求时，它会在消息的 replyTo 属性中指定一个队列名称，这个队列是客户端用来接收来自服务器的响应的。服务器处理完请求后，会将响应发送到这个指定的队列。客户端则会监听这个队列，以获取服务器返回的响应。
+     * 在 RabbitMQ 中，_replyTo 通常是一个临时队列的名称，这个队列会在客户端连接到 RabbitMQ 时创建，并在客户端断开连接时自动删除。这样可以确保每个 RPC 请求都有一个唯一的响应队列，并且不会因为队列名称冲突而导致消息混乱。
+     * 在这段代码中，_replyTo 的值是通过 params.getReplyTo() 方法获取的，这个方法可能是从配置文件、环境变量或者其他方式获取的队列名称。然后，这个值被用来设置 RpcClient 的 _replyTo 属性，以便在发送 RPC 请求时使用
+     *
+     *在 RabbitMQ 中，如果使用 amq.rabbitmq.reply-to 作为 replyTo 队列的值，那么客户端无需显式声明该队列。amq.rabbitmq.reply-to 是 RabbitMQ 内置的一个特殊队列，它允许客户端实现简化的 RPC 通信模式。这个队列是由 RabbitMQ 自动管理的，客户端只需订阅它，无需手动声明
      */
     private final String _replyTo;
     /**
@@ -189,7 +196,7 @@ public class RpcClient implements AutoCloseable {
     }
 
     /**
-     * Registers a consumer on the reply queue.
+     * Registers a consumer on the reply queue. 在应答队列上注册一个消费者
      *
      * @return the newly created and registered consumer
      * @throws IOException if an error is encountered
@@ -214,25 +221,26 @@ public class RpcClient implements AutoCloseable {
                                        byte[] body) {
                 synchronized (_continuationMap) {
                     String replyId = properties.getCorrelationId();
-                    BlockingCell<Object> blocker = _continuationMap.remove(replyId);
+                    BlockingCell<Object> blocker = _continuationMap.remove(replyId); // 每个replyId对应一个BlockingCell（存放应答信息）
                     if (blocker == null) {
                         // Entry should have been removed if request timed out,
                         // log a warning nevertheless.
                         LOGGER.warn("No outstanding request for correlation ID {}", replyId);
                     } else {
-                        blocker.set(new Response(consumerTag, envelope, properties, body));
+                        blocker.set(new Response(consumerTag, envelope, properties, body)); // 服务端的应答消息设置入BlockingCell，由客户端的主线程从中获取
                     }
                 }
             }
         };
-        // 定义特定的队列
-        _channel.basicConsume(_replyTo, true, consumer); // replyTo就是一个队列：amq.rabbitmq.reply-to
+        // 订阅特定的队列消息（类比请求应答）
+        String s = _channel.basicConsume(_replyTo, true, consumer);// replyTo就是一个队列：amq.rabbitmq.reply-to
+        System.out.println("consumerTag="+s);
         return consumer;
     }
 
     public void publish(AMQP.BasicProperties props, byte[] message)
             throws IOException {
-        _channel.basicPublish(_exchange, _routingKey, _useMandatory, props, message);
+        _channel.basicPublish(_exchange, _routingKey, _useMandatory, props, message); // 消息发送到服务端订阅的队列中
     }
 
     public Response doCall(AMQP.BasicProperties props, byte[] message)
@@ -243,19 +251,19 @@ public class RpcClient implements AutoCloseable {
     public Response doCall(AMQP.BasicProperties props, byte[] message, int timeout)
             throws IOException, ShutdownSignalException, TimeoutException {
         checkNotClosed();
-        BlockingCell<Object> k = new BlockingCell<Object>();
+        BlockingCell<Object> k = new BlockingCell<Object>(); // 每个请求都有对应一个BlockingCell（保存服务端的应答）
         String replyId;
         synchronized (_continuationMap) {
-            replyId = _correlationIdSupplier.get();
+            replyId = _correlationIdSupplier.get(); // 1
             lastCorrelationId = replyId;
-            props = ((props == null) ? new AMQP.BasicProperties.Builder() : props.builder())
+            props = ((props == null) ? new AMQP.BasicProperties.Builder() : props.builder()) // #contentHeader<basic>(content-type=null, content-encoding=null, headers=null, delivery-mode=null, priority=null, correlation-id=1, reply-to=amq.rabbitmq.reply-to, expiration=null, message-id=null, timestamp=null, type=null, user-id=null, app-id=null, cluster-id=null)
                     .correlationId(replyId).replyTo(_replyTo).build();
-            _continuationMap.put(replyId, k);
+            _continuationMap.put(replyId, k); // 发送之前先保存BlockingCell，BlockingCell用于保存服务端回复的消息，收到服务端的应答后，将消息设置入BlockingCell，客户端处理应答时再从集合移除
         }
         publish(props, message);
         Object reply;
         try {
-            reply = k.uninterruptibleGet(timeout);
+            reply = k.uninterruptibleGet(timeout); // 客户端等待服务端的应答
         } catch (TimeoutException ex) {
             // Avoid potential leak.  This entry is no longer needed by caller.
             _continuationMap.remove(replyId);

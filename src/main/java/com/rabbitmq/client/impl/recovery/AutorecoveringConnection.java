@@ -76,6 +76,9 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
     private volatile RecoveryAwareAMQConnection delegate;
 
     private final List<ShutdownListener> shutdownHooks = Collections.synchronizedList(new ArrayList<>());
+    /**
+     * connection 自动回复连接的监听者
+     */
     private final List<RecoveryListener> recoveryListeners = Collections.synchronizedList(new ArrayList<>());
     private final List<BlockedListener> blockedListeners = Collections.synchronizedList(new ArrayList<>());
 
@@ -91,7 +94,7 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
 
     private final TopologyRecoveryFilter topologyRecoveryFilter;
 
-    // Used to block connection recovery attempts after close() is invoked.
+    // Used to block connection recovery attempts after close() is invoked. 在调用close()方法后阻止连接恢复尝试
     private volatile boolean manuallyClosed = false;
 
     // This lock guards the manuallyClosed flag and the delegate connection.  Guarding these two ensures that a new connection can never
@@ -583,30 +586,37 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
         return this.recoveredQueueNameSupplier;
     }
 
+    /**
+     * connection自动恢复逻辑
+     *
+     * @throws InterruptedException
+     */
     private synchronized void beginAutomaticRecovery() throws InterruptedException {
         final long delay = this.params.getRecoveryDelayHandler().getDelay(0);
         if (delay > 0) {
             this.wait(delay);
         }
 
-        this.notifyRecoveryListenersStarted();
+        this.notifyRecoveryListenersStarted();  // 开始恢复连接
 
+        // 重新创建连接
         final RecoveryAwareAMQConnection newConn = this.recoverConnection();
         if (newConn == null) {
             return;
         }
+        // 在新连接上进行一系列的初始化
         LOGGER.debug("Connection {} has recovered", newConn);
-        this.addAutomaticRecoveryListener(newConn);
-        this.recoverShutdownListeners(newConn);
-        this.recoverBlockedListeners(newConn);
-        this.recoverChannels(newConn);
+        this.addAutomaticRecoveryListener(newConn); // 给新的连接器注册一个链接恢复监听器，这样新的连接关了，也能触发连接恢复逻辑
+        this.recoverShutdownListeners(newConn); // 拷贝旧的连接上的关闭监听器，注册到新的连接上
+        this.recoverBlockedListeners(newConn); // 也是拷贝，注册
+        this.recoverChannels(newConn); // 恢复旧的连接上已经创建的Channel
         // don't assign new delegate connection until channel recovery is complete
         this.delegate = newConn;
-        if (this.params.isTopologyRecoveryEnabled()) {
-            notifyTopologyRecoveryListenersStarted();
-            recoverTopology(params.getTopologyRecoveryExecutor());
+        if (this.params.isTopologyRecoveryEnabled()) { // 判断交换机，队列，绑定，消费者是否都需要恢复
+            notifyTopologyRecoveryListenersStarted(); // 执行回复前的通知
+            recoverTopology(params.getTopologyRecoveryExecutor());  // 交换机，队列，绑定，消费者恢复
         }
-        this.notifyRecoveryListenersComplete();
+        this.notifyRecoveryListenersComplete(); // 恢复完成
     }
 
     private void recoverShutdownListeners(final RecoveryAwareAMQConnection newConn) {
@@ -629,10 +639,10 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
             try {
                 attempts++;
                 // No Sonar: no need to close this resource because we're the one that creates it
-                // and hands it over to the user
-                RecoveryAwareAMQConnection newConn = this.cf.newConnection(); //NOSONAR
+                // and hands it over to the user  不需要关闭这个资源，因为是我们创建它并交给用户的
+                RecoveryAwareAMQConnection newConn = this.cf.newConnection(); // 当前连接异常，此时创建一个异常来替换他
                 synchronized (recoveryLock) {
-                    if (!manuallyClosed) {
+                    if (!manuallyClosed) { // 不是主动关闭上一个连接，如果是主动关闭上一个连接，那么就不自动恢复连接
                         // This is the standard case.
                         return newConn;
                     }
@@ -640,7 +650,7 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
                 // This is the once in a blue moon case.
                 // Application code just called close as the connection
                 // was being re-established.  So we attempt to close the newly created connection.
-                newConn.abort();
+                newConn.abort(); // 这是一个千载难逢的情况。应用程序代码刚调用了 close，而此时连接正在重新建立。因此，我们尝试关闭新创建的连接
                 return null;
             } catch (Exception e) {
                 Thread.sleep(this.params.getRecoveryDelayHandler().getDelay(attempts));
@@ -651,6 +661,10 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
         return null;
     }
 
+    /**
+     * 恢复connection上的每一个channel
+     * @param newConn
+     */
     private void recoverChannels(final RecoveryAwareAMQConnection newConn) {
         for (AutorecoveringChannel ch : this.channels.values()) {
             try {

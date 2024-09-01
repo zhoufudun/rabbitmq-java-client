@@ -26,6 +26,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -117,13 +119,20 @@ public class AMQConnectionRefreshCredentialsTest {
         CountDownLatch unregisteredLatch = new CountDownLatch(1);
 
         AtomicReference<Callable<Boolean>> refreshTokenCallable = new AtomicReference<>();
-        when(refreshService.register(eq(credentialsProvider), any(Callable.class))).thenAnswer(invocation -> {
-            refreshTokenCallable.set(invocation.getArgument(1));
-            return registrationId;
-        });
-        doAnswer(invocation -> {
-            unregisteredLatch.countDown();
-            return null;
+        when(refreshService.register(eq(credentialsProvider), any(Callable.class)))
+                .thenAnswer(new Answer<Object>() {
+                    @Override
+                    public Object answer(InvocationOnMock invocation) throws Throwable {
+                        refreshTokenCallable.set(invocation.getArgument(1));
+                        return registrationId;
+                    }
+                });
+        doAnswer(new Answer() {
+            @Override
+            public Object answer(InvocationOnMock invocation) throws Throwable {
+                unregisteredLatch.countDown();
+                return null;
+            }
         }).when(refreshService).unregister(credentialsProvider, registrationId);
 
         cf.setCredentialsRefreshService(refreshService);

@@ -27,6 +27,7 @@ import org.mockito.Mockito;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Stream;
+
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -79,8 +80,8 @@ public class ChannelNTest {
         Consumer qosGlobal = value -> channel.basicQos(value, true);
         Consumer qosPrefetchSize = value -> channel.basicQos(10, value, true);
         Stream.of(
-                new TestConfig(-1, qos), new TestConfig(65536, qos)
-        ).flatMap(config -> Stream.of(config, new TestConfig(config.value, qosGlobal), new TestConfig(config.value, qosPrefetchSize)))
+                        new TestConfig(-1, qos), new TestConfig(65536, qos)
+                ).flatMap(config -> Stream.of(config, new TestConfig(config.value, qosGlobal), new TestConfig(config.value, qosPrefetchSize)))
                 .forEach(config -> assertThatThrownBy(() -> config.call.apply(config.value)).isInstanceOf(IllegalArgumentException.class));
     }
 

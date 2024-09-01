@@ -57,6 +57,8 @@ import static com.rabbitmq.client.ConnectionFactory.computeDefaultTlsProtocol;
  * If more customization is needed, a {@link #connectionConfigurator} callback can be provided to configure
  * the connection.
  *
+ * 通过http请求获取token
+ *
  * @see RefreshProtectedCredentialsProvider
  * @see CredentialsRefreshService
  * @see OAuth2ClientCredentialsGrantCredentialsProviderBuilder
@@ -174,8 +176,7 @@ public class OAuth2ClientCredentialsGrantCredentialsProvider extends RefreshProt
         this.parameters = Collections.unmodifiableMap(new HashMap<>(parameters));
         this.hostnameVerifier = hostnameVerifier;
         this.sslSocketFactory = sslSocketFactory;
-        this.connectionConfigurator = connectionConfigurator == null ? c -> {
-        } : connectionConfigurator;
+        this.connectionConfigurator = connectionConfigurator == null ? OAuth2ClientCredentialsGrantCredentialsProvider::accept : connectionConfigurator;
         this.id = UUID.randomUUID().toString();
     }
 
@@ -199,8 +200,11 @@ public class OAuth2ClientCredentialsGrantCredentialsProvider extends RefreshProt
         String credentials = username + ":" + password;
         byte[] credentialsAsBytes = credentials.getBytes(StandardCharsets.ISO_8859_1);
         byte[] encodedBytes = Base64.getEncoder().encode(credentialsAsBytes);
-        String encodedCredentials = new String(encodedBytes, StandardCharsets.ISO_8859_1);
-        return "Basic " + encodedCredentials;
+        String encodedCredentials = new String(encodedBytes, StandardCharsets.ISO_8859_1); // 用户密码拼接后再加密
+        return "Basic " + encodedCredentials; // Basic cmFiYml0X2NsaWVudDpyYWJiaXRfc2VjcmV0
+    }
+
+    private static void accept(HttpURLConnection c) {
     }
 
     @Override
@@ -214,8 +218,7 @@ public class OAuth2ClientCredentialsGrantCredentialsProvider extends RefreshProt
     }
 
     protected Token parseToken(String response) {
-        return this.tokenExtractor.updateAndGet(current ->
-            current == null ? new JacksonTokenLookup() : current).apply(response);
+        return this.tokenExtractor.updateAndGet(current -> current == null ? new JacksonTokenLookup() : current).apply(response);
     }
 
     @Override
@@ -228,7 +231,7 @@ public class OAuth2ClientCredentialsGrantCredentialsProvider extends RefreshProt
             }
             byte[] postData = urlParameters.toString().getBytes(StandardCharsets.UTF_8);
             int postDataLength = postData.length;
-            URL url = new URI(tokenEndpointUri).toURL();
+            URL url = new URI(tokenEndpointUri).toURL(); // http://localhost:61869/uaa/oauth/token/
 
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 
@@ -590,6 +593,16 @@ public class OAuth2ClientCredentialsGrantCredentialsProvider extends RefreshProt
 
     }
 
+    /** response；
+     *
+     * {
+     *   "access_token" : "f012434c-ad13-422e-9ffc-da93598be4f4",
+     *   "token_type" : "bearer",
+     *   "expires_in" : 60,
+     *   "scope" : "clients.read emails.write scim.userids password.write idps.write notifications.write oauth.login scim.write critical_notifications.write",
+     *   "jti" : "18c1b1dfdda04382a8bcc14d077b71dd"
+     * }
+     */
     private static class JacksonTokenLookup implements Function<String, Token> {
 
         private final ObjectMapper objectMapper = new ObjectMapper();

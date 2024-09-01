@@ -179,7 +179,7 @@ public class ChannelManager {
     public ChannelN createChannel(AMQConnection connection) throws IOException {
         ChannelN ch; // RecoveryAwareChannelN
         synchronized (this.monitor) {
-            int channelNumber = channelNumberAllocator.allocate();
+            int channelNumber = channelNumberAllocator.allocate(); // 给同一个AMQConnection中的不同channel分配唯一ID
             if (channelNumber == -1) {
                 return null;
             } else {

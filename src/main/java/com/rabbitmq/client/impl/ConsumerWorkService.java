@@ -25,6 +25,9 @@ import com.rabbitmq.client.Channel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * 一个客户端连接（AMQConnection）一个实例
+ */
 final public class ConsumerWorkService {
     private static final Logger LOGGER = LoggerFactory.getLogger(ConsumerWorkService.class);
     private static final int MAX_RUNNABLE_BLOCK_SIZE = 256;
@@ -113,6 +116,7 @@ final public class ConsumerWorkService {
                     }
                 } finally {
                     if (ConsumerWorkService.this.workPool.finishWorkBlock(key)) {
+                        // 如果客户端有更多的工作项，继续提交任务执行
                         ConsumerWorkService.this.executor.execute(new WorkPoolRunnable());
                     }
                 }

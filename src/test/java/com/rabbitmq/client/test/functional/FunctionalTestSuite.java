@@ -67,7 +67,7 @@ import org.junit.platform.suite.api.Suite;
     HeadersExchangeValidation.class,
     ConsumerPriorities.class,
     Policies.class,
-    ConnectionRecovery.class,
+    ConnectionRecoveryTest.class,
     ExceptionHandling.class,
     PerConsumerPrefetch.class,
     DirectReplyTo.class,

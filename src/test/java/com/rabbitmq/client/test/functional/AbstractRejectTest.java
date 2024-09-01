@@ -32,6 +32,7 @@ import com.rabbitmq.client.test.BrokerTestCase;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 
 abstract class AbstractRejectTest extends BrokerTestCase {
 

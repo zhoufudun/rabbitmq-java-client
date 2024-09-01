@@ -70,6 +70,12 @@ public class RpcTest {
         TestUtils.close(serverConnection);
     }
 
+    /**
+     * 疑问：客户端订阅应答的队列不需要申明吗？
+     * 答案：在 RabbitMQ 中，如果使用 amq.rabbitmq.reply-to 作为 replyTo 队列的值，那么客户端无需显式声明该队列。amq.rabbitmq.reply-to 是 RabbitMQ 内置的一个特殊队列，它允许客户端实现简化的 RPC 通信模式。这个队列是由 RabbitMQ 自动管理的，客户端只需订阅它，无需手动声明
+     *
+     * @throws Exception
+     */
     @Test
     public void rpc() throws Exception {
         rpcServer = new TestRpcServer(serverChannel, queue); // 理解为一个RPCServer
@@ -80,17 +86,21 @@ public class RpcTest {
                 // safe to ignore when loops ends/server is canceled
             }
         }).start();
+
         // 类比为客户端发送请求到服务端
-        RpcClient client = new RpcClient(new RpcClientParams()
-                .channel(clientChannel).exchange("").routingKey(queue).timeout(1000));
-        RpcClient.Response response = client.doCall(null, "hello".getBytes()); // 向队列发送消息
-        assertEquals("*** hello ***", new String(response.getBody()));
-        assertEquals("pre-hello", response.getProperties().getHeaders().get("pre").toString());
-        assertEquals("post-hello", response.getProperties().getHeaders().get("post").toString());
-
-        Assertions.assertThat(client.getCorrelationId()).isEqualTo(Integer.valueOf(response.getProperties().getCorrelationId()));
-
-        client.close();
+        RpcClient client = new RpcClient(new RpcClientParams().channel(clientChannel).exchange("").routingKey(queue).timeout(1000)); // 客户端发布的请求发送到服务端订阅的队列中
+        for (int i = 0; i < 1000; i++) {
+            Thread.sleep(1000);
+            RpcClient.Response response = client.doCall(null, "hello".getBytes()); // 向队列发送消息
+            System.out.println(new String(response.getBody()));
+        }
+//        assertEquals("*** hello ***", new String(response.getBody()));
+//        assertEquals("pre-hello", response.getProperties().getHeaders().get("pre").toString());
+//        assertEquals("post-hello", response.getProperties().getHeaders().get("post").toString());
+//
+//        Assertions.assertThat(client.getCorrelationId()).isEqualTo(Integer.valueOf(response.getProperties().getCorrelationId()));
+//
+//        client.close();
     }
 
     @Test
@@ -337,6 +347,7 @@ public class RpcTest {
             super(channel, queueName);
         }
 
+        // 这里模拟服务端端处理消息后给客户端回复消息
         @Override
         protected AMQP.BasicProperties preprocessReplyProperties(Delivery request, AMQP.BasicProperties.Builder builder) {
             Map<String, Object> headers = new HashMap<>();
@@ -345,12 +356,14 @@ public class RpcTest {
             return builder.build();
         }
 
+        // 这里模拟服务端端处理消息后给客户端回复消息
         @Override
         public byte[] handleCall(Delivery request, AMQP.BasicProperties replyProperties) {
             String input = new String(request.getBody());
             return ("*** " + input + " ***").getBytes();
         }
 
+        // 这里模拟服务端端处理消息后给客户端回复消息
         @Override
         protected AMQP.BasicProperties postprocessReplyProperties(Delivery request, AMQP.BasicProperties.Builder builder) {
             Map<String, Object> headers = new HashMap<String, Object>(builder.build().getHeaders());

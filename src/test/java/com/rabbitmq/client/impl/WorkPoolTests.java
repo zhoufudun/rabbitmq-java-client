@@ -26,6 +26,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
+ * read
  * Unit tests for {@link WorkPool}
  */
 public class WorkPoolTests {
@@ -35,15 +36,18 @@ public class WorkPoolTests {
     /**
      * Test unknown key tolerated silently
      */
-    @Test public void unknownKey() {
+    @Test
+    public void unknownKey() {
         assertFalse(this.pool.addWorkItem("test", new Object()));
     }
 
     /**
      * Test add work and remove work
+     *
      * @throws Exception untested
      */
-    @Test public void basicInOut() throws Exception {
+    @Test
+    public void basicInOut() throws Exception {
         Object one = new Object();
         Object two = new Object();
 
@@ -70,9 +74,11 @@ public class WorkPoolTests {
 
     /**
      * Test add work when work in progress.
+     *
      * @throws Exception untested
      */
-    @Test public void workInWhileInProgress() throws Exception {
+    @Test
+    public void workInWhileInProgress() throws Exception {
         Object one = new Object();
         Object two = new Object();
 
@@ -98,13 +104,19 @@ public class WorkPoolTests {
 
     /**
      * Test multiple work keys.
+     *
      * @throws Exception untested
      */
-    @Test public void interleavingKeys() throws Exception {
+    @Test
+    public void interleavingKeys() throws Exception {
         Object one = new Object();
         Object two = new Object();
         Object three = new Object();
 
+        /**
+         * 处理任务是按照key的顺序一批批处理任务
+         * 也就说是，先处理key1的全部任务，假设100个，处理完了，在处理key2的任务假设10个
+         */
         this.pool.registerKey("test1");
         this.pool.registerKey("test2");
 
@@ -129,9 +141,11 @@ public class WorkPoolTests {
 
     /**
      * Test removal of key (with work)
+     *
      * @throws Exception untested
      */
-    @Test public void unregisterKey() throws Exception {
+    @Test
+    public void unregisterKey() throws Exception {
         Object one = new Object();
         Object two = new Object();
         Object three = new Object();
@@ -154,9 +168,11 @@ public class WorkPoolTests {
 
     /**
      * Test removal of all keys (with work).
+     *
      * @throws Exception untested
      */
-    @Test public void unregisterAllKeys() throws Exception {
+    @Test
+    public void unregisterAllKeys() throws Exception {
         Object one = new Object();
         Object two = new Object();
         Object three = new Object();

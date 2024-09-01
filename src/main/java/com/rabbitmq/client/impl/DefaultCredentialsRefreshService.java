@@ -132,9 +132,9 @@ public class DefaultCredentialsRefreshService implements CredentialsRefreshServi
      * Delay before refresh is <code>time before expiration - specified duration</code>.
      * <p>
      * E.g. if time before expiration is 60 minutes and specified duration is 10 minutes, refresh will
-     * be scheduled in 60 - 10 = 50 minutes.
+     * be scheduled in 60 - 10 = 50 minutes. 如果资源到期时间是 60 分钟，而指定的时间段是 10 分钟，那么刷新操作会在 60 - 10 = 50 分钟后安排进行
      *
-     * @param duration
+     * @param duration 提前时间
      * @return the delay before refreshing
      */
     public static Function<Duration, Duration> fixedDelayBeforeExpirationRefreshDelayStrategy(Duration duration) {

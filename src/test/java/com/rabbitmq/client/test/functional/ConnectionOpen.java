@@ -39,7 +39,9 @@ import javax.net.SocketFactory;
 
 
 /**
+ * read
  * Check that protocol negotiation works
+ * 测试连接打开过程（指令）
  */
 public class ConnectionOpen {
     @Test
@@ -47,9 +49,9 @@ public class ConnectionOpen {
         SocketFrameHandler fh = new SocketFrameHandler(SocketFactory.getDefault().createSocket("localhost", AMQP.PROTOCOL.PORT));
         fh.sendHeader();
         AMQCommand command = new AMQCommand();
-        while (!command.handleFrame(fh.readFrame())) {
+        while (!command.handleFrame(fh.readFrame())) { // 一直等待消息，直到有消息
         }
-        Method m = command.getMethod();
+        Method m = command.getMethod(); // #method<connection.start>(version-major=0, version-minor=9, server-properties={cluster_name=rabbit@WIN-20230608VMY, copyright=Copyright (c) 2007-2024 Broadcom Inc and/or its subsidiaries, product=RabbitMQ, capabilities={consumer_priorities=true, exchange_exchange_bindings=true, connection.blocked=true, authentication_failure_close=true, per_consumer_qos=true, basic.nack=true, direct_reply_to=true, publisher_confirms=true, consumer_cancel_notify=true}, information=Licensed under the MPL 2.0. Website: https://rabbitmq.com, version=3.13.2, platform=Erlang/OTP 27.0}, mechanisms=PLAIN AMQPLAIN, locales=en_US)
 
         assertTrue(m instanceof AMQP.Connection.Start, "First command must be Connection.start");
         AMQP.Connection.Start start = (AMQP.Connection.Start) m;
@@ -88,6 +90,7 @@ public class ConnectionOpen {
             } catch (MalformedFrameException mfe) {
                 fail("Expected nothing, rather than a badly-formed something");
             } catch (IOException ioe) {
+                System.out.println("expect result, error="+ioe);
             }
         }
     }

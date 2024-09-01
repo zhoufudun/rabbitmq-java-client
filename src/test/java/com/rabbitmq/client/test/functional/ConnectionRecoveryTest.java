@@ -44,21 +44,23 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 
 @SuppressWarnings("ThrowFromFinallyBlock")
-public class ConnectionRecovery extends BrokerTestCase {
+public class ConnectionRecoveryTest extends BrokerTestCase {
     private static final long RECOVERY_INTERVAL = 2000;
 
     private static final int MANY_DECLARATIONS_LOOP_COUNT = 500;
 
     @Test
     public void connectionRecovery() throws IOException, InterruptedException {
+        // 报错，可能是系统问题，可能linux系统下可以吧？
+        System.setProperty("rabbitmqctl.bin","D:\\Program Files\\RabbitMQ Server\\rabbitmq_server-3.13.2\\sbin");
+
         assertThat(connection.isOpen()).isTrue();
         closeAndWaitForRecovery();
         assertThat(connection.isOpen()).isTrue();
     }
 
     @Test
-    public void namedConnectionRecovery()
-            throws IOException, InterruptedException, TimeoutException {
+    public void namedConnectionRecovery() throws IOException, InterruptedException, TimeoutException {
         String connectionName = "custom-name";
         RecoverableConnection c = newRecoveringConnection(connectionName);
         try {
@@ -772,7 +774,7 @@ public class ConnectionRecovery extends BrokerTestCase {
                     if (consumed.intValue() > 0 && consumed.intValue() % 4 == 0) {
                         CountDownLatch recoveryLatch = prepareForRecovery(connection);
                         Host.closeConnection((AutorecoveringConnection) connection);
-                        ConnectionRecovery.wait(recoveryLatch);
+                        ConnectionRecoveryTest.wait(recoveryLatch);
                     }
                     channel.basicAck(envelope.getDeliveryTag(), false);
                 } catch (InterruptedException e) {

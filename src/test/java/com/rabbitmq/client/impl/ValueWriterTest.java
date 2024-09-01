@@ -56,7 +56,7 @@ public class ValueWriterTest {
 
     @Test
     public void bigDecimalWrittenAndReadMatches() throws IOException {
-        BigDecimal value = new BigDecimal(BigInteger.valueOf(56), 3);
+        BigDecimal value = new BigDecimal(BigInteger.valueOf(56), 3); // 56.000
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         DataOutputStream dataOutputStream = new DataOutputStream(outputStream);
         ValueWriter valueWriter = new ValueWriter(dataOutputStream);

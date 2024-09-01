@@ -4,6 +4,7 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.ConfirmCallback;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
+import com.rabbitmq.client.test.TestUtils;
 
 import java.time.Duration;
 import java.util.UUID;
@@ -16,11 +17,8 @@ public class PublisherConfirms {
     static final int MESSAGE_COUNT = 50_000;
 
     static Connection createConnection() throws Exception {
-        ConnectionFactory cf = new ConnectionFactory();
-        cf.setHost("localhost");
-        cf.setUsername("guest");
-        cf.setPassword("guest");
-        return cf.newConnection();
+        ConnectionFactory connectionFactory = TestUtils.connectionFactory();
+        return connectionFactory.newConnection();
     }
 
     public static void main(String[] args) throws Exception {
@@ -36,12 +34,12 @@ public class PublisherConfirms {
             String queue = UUID.randomUUID().toString();
             ch.queueDeclare(queue, false, false, true, null);
 
-            ch.confirmSelect();
+            ch.confirmSelect(); // 开启发布确认机制
             long start = System.nanoTime();
             for (int i = 0; i < MESSAGE_COUNT; i++) {
                 String body = String.valueOf(i);
                 ch.basicPublish("", queue, null, body.getBytes());
-                ch.waitForConfirmsOrDie(5_000);
+                ch.waitForConfirmsOrDie(5_000); // 等待发布ack消息，超时抛出异常
             }
             long end = System.nanoTime();
             System.out.format("Published %,d messages individually in %,d ms%n", MESSAGE_COUNT, Duration.ofNanos(end - start).toMillis());

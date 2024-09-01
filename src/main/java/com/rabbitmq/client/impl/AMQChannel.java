@@ -224,6 +224,7 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
                     _channelLock.unlock();
                 }
             }
+            // If we get here, the command is a response to an earlier RPC
             final RpcWrapper nextOutstandingRpc = nextOutstandingRpc(); // 获取当前待处理完成的RPC请求（等待应答）
             // the outstanding RPC can be null when calling Channel#asyncRpc
             if (nextOutstandingRpc != null) {
@@ -534,8 +535,7 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
     }
 
     public static abstract class BlockingRpcContinuation<T> implements RpcContinuation {
-        final BlockingValueOrException<T, ShutdownSignalException> _blocker =
-                new BlockingValueOrException<>();
+        final BlockingValueOrException<T, ShutdownSignalException> _blocker = new BlockingValueOrException<>();
 
         protected final Method request;
 
@@ -572,6 +572,13 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
 
         public abstract T transformReply(AMQCommand command);
 
+        /**
+         * 消息成对关系
+         *
+         * @param request
+         * @param response
+         * @return
+         */
         static boolean isResponseCompatibleWithRequest(Method request, Method response) {
             // make a best effort attempt to ensure the reply was intended for this rpc request
             // Ideally each rpc request would tag an id on it that could be returned and referenced on its reply.

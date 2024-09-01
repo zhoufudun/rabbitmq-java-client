@@ -115,7 +115,7 @@ public class RpcServer {
      *
      * @return the exception that signalled the Channel shutdown, or null for orderly shutdown
      */
-    public ShutdownSignalException mainloop()
+    public ShutdownSignalException mainloop() // 服务端不断获取客户端的请求
             throws IOException {
         try {
             while (_mainloopRunning) {
@@ -128,7 +128,7 @@ public class RpcServer {
                     continue;
                 }
                 processRequest(request);
-                _channel.basicAck(request.getEnvelope().getDeliveryTag(), false);
+                _channel.basicAck(request.getEnvelope().getDeliveryTag(), false); // 回复消费成功
             }
             return null;
         } catch (ShutdownSignalException sse) {
@@ -153,15 +153,15 @@ public class RpcServer {
      */
     public void processRequest(Delivery request)
             throws IOException {
-        AMQP.BasicProperties requestProperties = request.getProperties();
+        AMQP.BasicProperties requestProperties = request.getProperties(); // #contentHeader<basic>(content-type=null, content-encoding=null, headers=null, delivery-mode=null, priority=null, correlation-id=1, reply-to=amq.rabbitmq.reply-to.g1h2AA5yZXBseUAyNjgxNzU3NwAAEDwAAAAAZs8pcw==.pgmgy8/Ibt1nrFjCV5/4rQ==, expiration=null, message-id=null, timestamp=null, type=null, user-id=null, app-id=null, cluster-id=null)
         String correlationId = requestProperties.getCorrelationId();
-        String replyTo = requestProperties.getReplyTo(); // replyTo理解为服务端收到了请求，需要将处理后的请求应答给哪个客户端
+        String replyTo = requestProperties.getReplyTo(); // replyTo理解为服务端收到了请求，需要将处理后的请求应答给哪个客户端： amq.rabbitmq.reply-to.g1h2AA5yZXBseUAyNjgxNzU3NwAAEDwAAAAAZs8pcw==.pgmgy8/Ibt1nrFjCV5/4rQ==
         if (correlationId != null && replyTo != null) {
             AMQP.BasicProperties.Builder replyPropertiesBuilder
                     = new AMQP.BasicProperties.Builder().correlationId(correlationId);
             AMQP.BasicProperties replyProperties = preprocessReplyProperties(request, replyPropertiesBuilder);
             byte[] replyBody = handleCall(request, replyProperties);
-            replyProperties = postprocessReplyProperties(request, replyProperties.builder());
+            replyProperties = postprocessReplyProperties(request, replyProperties.builder()); // #contentHeader<basic>(content-type=null, content-encoding=null, headers={pre=pre-hello}, delivery-mode=null, priority=null, correlation-id=1, reply-to=null, expiration=null, message-id=null, timestamp=null, type=null, user-id=null, app-id=null, cluster-id=null)
             _channel.basicPublish("", replyTo, replyProperties, replyBody); // 应答消息通过发布消息给服务端，客户端订阅队列消息接受应答
         } else {
             handleCast(request);
@@ -342,7 +342,7 @@ public class RpcServer {
          * Otherwise, if we are in shutdown mode or cancelled,
          * throw a corresponding exception.
          */
-        private Delivery handle(Delivery delivery) {
+        private Delivery handle(Delivery delivery) { // 正常是收到客户端的请求：#contentHeader<basic>(content-type=null, content-encoding=null, headers=null, delivery-mode=null, priority=null, correlation-id=1, reply-to=amq.rabbitmq.reply-to.g1h2AA5yZXBseUAyNjgxNzU3NwAAEDwAAAAAZs8pcw==.pgmgy8/Ibt1nrFjCV5/4rQ==, expiration=null, message-id=null, timestamp=null, type=null, user-id=null, app-id=null, cluster-id=null)
             if (delivery == POISON ||
                     delivery == null && (_shutdown != null || _cancelled != null)) {
                 if (delivery == POISON) {

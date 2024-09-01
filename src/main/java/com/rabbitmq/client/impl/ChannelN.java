@@ -72,7 +72,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
     private final Collection<ConfirmListener> confirmListeners = new CopyOnWriteArrayList<ConfirmListener>();
 
     /**
-     * 下一个需要确认的已发布消息的序列号。
+     * 下一个需要确认的已发布消息的序列号。每个channel一个nextPublishSeqNo
      * Sequence number of next published message requiring confirmation.
      */
     private long nextPublishSeqNo = 0L;
@@ -238,27 +238,31 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
     @Override
     public boolean waitForConfirms(long timeout)
             throws InterruptedException, TimeoutException {
-        if (nextPublishSeqNo == 0L)
+        if (nextPublishSeqNo == 0L){
             throw new IllegalStateException("Confirms not selected");
+        }
         long startTime = System.currentTimeMillis();
         synchronized (unconfirmedSet) {
             while (true) {
                 if (getCloseReason() != null) {
                     throw Utility.fixStackTrace(getCloseReason());
                 }
-                if (unconfirmedSet.isEmpty()) {
+                if (unconfirmedSet.isEmpty()) { // 如果 unconfirmedSet 为空，则表示所有消息都已被确认，此时返回 onlyAcksReceived 的值，并将其设置为 true
                     boolean aux = onlyAcksReceived;
                     onlyAcksReceived = true;
                     return aux;
                 }
                 if (timeout == 0L) {
-                    unconfirmedSet.wait();
+                    unconfirmedSet.wait(); // 阻塞当前线程，直到 unconfirmedSet 为空时，唤醒当前线程
                 } else {
                     long elapsed = System.currentTimeMillis() - startTime;
                     if (timeout > elapsed) {
-                        unconfirmedSet.wait(timeout - elapsed);
+                        // 当前Connection的MainLoopThread处理服务端的消息，处理完消息后，当他发现unconfirmedSet为空时，会调用唤醒等待unconfirmedSet.wait（..）的线程（就是当前线程），此时返回 onlyAcksReceived 的值，并将其设置为 true。
+                        // 如果 timeout 大于 elapsed，则等待 timeout - elapsed 毫秒后返回 onlyAcksReceived 的值，并将其设置为 true
+                        unconfirmedSet.wait(timeout - elapsed); // 等待 timeout - elapsed 毫秒后返回 onlyAcksReceived 的值，并将其设置为 true
                     } else {
-                        throw new TimeoutException();
+                        // 假设被异常唤醒，发现unconfirmedSet不是空集，并且此时等待时间已经超过 timeout，则抛出异常
+                        throw new TimeoutException(); // 如果 timeout 小于 elapsed，则抛出异常
                     }
                 }
             }
@@ -284,7 +288,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
     public void waitForConfirmsOrDie(long timeout)
             throws IOException, InterruptedException, TimeoutException {
         try {
-            if (!waitForConfirms(timeout)) {
+            if (!waitForConfirms(timeout)) { // 当未收到任何 nack 时，返回 true
                 close(AMQP.REPLY_SUCCESS, "NACKS RECEIVED", true, null, false);
                 throw new IOException("nacks received");
             }
@@ -366,7 +370,10 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
      * Protected API - Filters the inbound command stream, processing
      * Basic.Deliver, Basic.Return and Channel.Close specially.  If
      * we're in quiescing mode, all inbound commands are ignored,
-     * except for Channel.Close and Channel.CloseOk.  收到如服务端的消息后会执行这个方法
+     * except for Channel.Close and Channel.CloseOk.
+     * 收到如服务端的消息后会执行这个方法
+     * com.rabbitmq.client.impl.AMQChannel#processAsync(com.rabbitmq.client.Command) 会执行以下方法
+     * 以下方法是客户端在收到服务端的消息后，根据服务端的消息类型进行分发
      */
     @Override
     public boolean processAsync(Command command) throws IOException {
@@ -380,7 +387,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
         Method method = command.getMethod(); // 举例： #method<basic.return>(reply-code=312, reply-text=NO_ROUTE, exchange=, routing-key=notlikelytoexist)
         // we deal with channel.close in the same way, regardless
         if (method instanceof Channel.Close) {
-            asyncShutdown(command);
+            asyncShutdown(command); //
             return true;
         }
 
@@ -406,6 +413,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
                 return true;
             } else if (method instanceof Basic.Ack) {
                 Basic.Ack ack = (Basic.Ack) method;
+                // 回调所有确认ack监听器
                 callConfirmListeners(command, ack);
                 handleAckNack(ack.getDeliveryTag(), ack.getMultiple(), false);
                 return true;
@@ -753,8 +761,8 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
         final long deliveryTag;
         if (nextPublishSeqNo > 0) {
             deliveryTag = getNextPublishSeqNo();
-            unconfirmedSet.add(deliveryTag);
-            nextPublishSeqNo++;
+            unconfirmedSet.add(deliveryTag); // 加入未确认ack集合中，收到ack后会删除
+            nextPublishSeqNo++; // 下一个发布序列号自增
         } else {
             deliveryTag = 0;
         }
@@ -1723,11 +1731,11 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
         if (confirmSelectActivated) {
             return new Confirm.SelectOk();
         }
-
-        if (nextPublishSeqNo == 0) nextPublishSeqNo = 1;
-        Confirm.SelectOk result = (Confirm.SelectOk)
-                exnWrappingRpc(new Confirm.Select(false)).getMethod();
-
+        if (nextPublishSeqNo == 0) {
+            nextPublishSeqNo = 1;
+        }
+        // #method<confirm.select-ok>()
+        Confirm.SelectOk result = (Confirm.SelectOk) exnWrappingRpc(new Confirm.Select(false)).getMethod();
         confirmSelectActivated = true;
         return result;
     }
@@ -1770,22 +1778,23 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
     protected void markRpcFinished() {
         _channelLock.lock();
         try {
-            dispatcher.setUnlimited(false);
+            dispatcher.setUnlimited(false); // 可能是用来限制或停止某种资源的分配？？
         } finally {
             _channelLock.unlock();
         }
     }
 
     private void handleAckNack(long seqNo, boolean multiple, boolean nack) {
-        if (multiple) {
-            unconfirmedSet.headSet(seqNo + 1).clear();
+        if (multiple) { // multiple 参数决定了确认操作的范围，是单个消息还是多个消息
+            unconfirmedSet.headSet(seqNo + 1).clear(); // 收到了确认消息，将从未确认消息队列中小于seqNo的消息全部移除
         } else {
             unconfirmedSet.remove(seqNo); // 收到了确认消息，将从未确认消息队列移除
         }
         synchronized (unconfirmedSet) {
             onlyAcksReceived = onlyAcksReceived && !nack;
-            if (unconfirmedSet.isEmpty())
+            if (unconfirmedSet.isEmpty()) { // 从未确认消息队列中没有消息了，唤醒所有等待的线程
                 unconfirmedSet.notifyAll();
+            }
         }
     }
 

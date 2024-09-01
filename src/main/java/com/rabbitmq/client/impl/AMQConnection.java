@@ -63,6 +63,7 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
     private ThreadFactory threadFactory = Executors.defaultThreadFactory();
     private String id;
 
+    // 连接恢复监听器
     private final List<RecoveryCanBeginListener> recoveryCanBeginListeners = Collections.synchronizedList(new ArrayList<>());
 
     private final ErrorOnWriteListener errorOnWriteListener;
@@ -102,14 +103,14 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
         return props;
     }
 
-    private static final Version clientVersion =
-            new Version(AMQP.PROTOCOL.MAJOR, AMQP.PROTOCOL.MINOR);
+    private static final Version clientVersion = new Version(AMQP.PROTOCOL.MAJOR, AMQP.PROTOCOL.MINOR);
 
     /**
      * The special channel 0 (<i>not</i> managed by the <code><b>_channelManager</b></code>)
      */
     private final AMQChannel _channel0;
 
+    // 一个AMQConnection会管理N个Channel，每个Channel会拥有一个queue，_workService消费这些Channel的queue
     protected ConsumerWorkService _workService = null;
 
     /**
@@ -181,7 +182,7 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
      */
     private volatile int _heartbeat = 0;
     /**
-     * Object that manages a set of channels
+     * Object that manages a set of channels：一个AMQConnection一个ChannelManager
      */
     private volatile ChannelManager _channelManager;
     /**
@@ -332,6 +333,9 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
      * 8、客户端向服务端服务端的open消息
      * 9、客户端发送open后等待服务端的openok
      * 10、客户端收到openok后，连接完成建立
+     *
+     * _channel0 专门处理以上1~9步骤，不被ChannelManager管理
+     * 在同一个AMQChannel中如果在创建Channel，每个Channel只需要经历10步，并且每个Channel要被ChannelManager管理
      *
      * @throws IOException if an error is encountered
      *                     either before, or during, protocol negotiation;
@@ -519,6 +523,13 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
         this._inConnectionNegotiation = false; // 设置标志位，表示连接协商阶段结束
     }
 
+    /**
+     * 一个AMQConnection一个ChannelManager
+     *
+     * @param channelMax
+     * @param threadFactory
+     * @return
+     */
     protected ChannelManager instantiateChannelManager(int channelMax, ThreadFactory threadFactory) {
         ChannelManager result = new ChannelManager(
                 this._workService, channelMax, threadFactory,
@@ -857,10 +868,15 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
             // asynchronously, e.g. start new threads, this effectively
             // guarantees that we only begin recovery when all shutdown
             // listeners have executed
-            notifyRecoveryCanBeginListeners();
+            // 假设关闭监听器（shutdown listeners）不会执行任何异步操作，例如启动新线程，
+            // 这样就能有效地保证在所有关闭监听器都执行完毕之后，才开始进行恢复操作
+            notifyRecoveryCanBeginListeners(); // 通知开始恢复连接恢复操作
         }
     }
 
+    /**
+     * 中断mainLoopThread线程
+     */
     private void closeMainLoopThreadIfNecessary() {
         if (mainLoopReadThreadNotNull() && notInMainLoopThread()) {
             if (this.mainLoopThread.isAlive()) {

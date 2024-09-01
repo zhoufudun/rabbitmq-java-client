@@ -64,6 +64,10 @@ public class DefaultCredentialsRefreshServiceTest {
         mocks.close();
     }
 
+    /**
+     * read
+     * @throws Exception
+     */
     @Test
     public void scheduling() throws Exception {
         refreshService = new DefaultCredentialsRefreshService.DefaultCredentialsRefreshServiceBuilder()
@@ -71,13 +75,15 @@ public class DefaultCredentialsRefreshServiceTest {
                 .build();
 
         AtomicInteger passwordSequence = new AtomicInteger(0);
+        // 模拟获取应答
         when(credentialsProvider.getPassword()).thenAnswer(
                 (Answer<String>) invocation -> "password-" + passwordSequence.get());
+        // 模拟还有5秒就过期了
         when(credentialsProvider.getTimeBeforeExpiration()).thenAnswer((Answer<Duration>) invocation -> ofSeconds(5));
         doAnswer(invocation -> {
             passwordSequence.incrementAndGet();
             return null;
-        }).when(credentialsProvider).refresh();
+        }).when(credentialsProvider).refresh(); // 模拟token刷新动作
 
         List<String> passwords = new CopyOnWriteArrayList<>();
         CountDownLatch latch = new CountDownLatch(2 * 2);

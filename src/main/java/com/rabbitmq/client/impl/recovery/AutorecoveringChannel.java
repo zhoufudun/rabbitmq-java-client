@@ -784,13 +784,17 @@ public class AutorecoveringChannel implements RecoverableChannel {
         RecoveryAwareChannelN defunctChannel = this.delegate;
         this.connection = connection;
 
+        // 用旧的Channel的channelNumber重新在新的Connection上创建一个新的channel
         final RecoveryAwareChannelN newChannel = (RecoveryAwareChannelN) connDelegate.createChannel(this.getChannelNumber());
         // No Sonar: the channel could be null
         if (newChannel == null) //NOSONAR
             throw new IOException("Failed to create new channel for channel number=" + this.getChannelNumber() + " during recovery");
-        newChannel.inheritOffsetFrom(defunctChannel);
-        this.delegate = newChannel;
 
+        // 继承上旧的channel中消费的偏移量，以便在新的channel中能够正确地继续消费
+        newChannel.inheritOffsetFrom(defunctChannel);
+        this.delegate = newChannel; // 新channel替换旧的
+
+        // 执行一些列的channel级别的回调
         this.notifyRecoveryListenersStarted();
         this.recoverShutdownListeners();
         this.recoverReturnListeners();

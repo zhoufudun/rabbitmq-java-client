@@ -49,32 +49,41 @@ import java.util.function.BiConsumer;
  * All clients may be unregistered with <code><b>unregisterAllKeys()</b></code>.
  * <h2>Concurrent Semantics</h2>
  * This implementation is thread-safe.
+ *
  * @param <K> Key -- type of client
  * @param <W> Work -- type of work item
- *
- *
- * 这是2010年11月（channels.pdf）中channel规范的通用实现。必须使用registerKey（K）注册K类型的对象，
- * 然后它们成为客户端，并为每个客户端存储一个项目队列（W类型）。
- * 每个客户端都有一个状态，该状态恰好是休眠、进行中或就绪状态之一。
- * 注册后，客户立即处于休眠状态。可以使用addWorkItem（Object，Object）将项目（单独）添加到客户端的队列（末尾）。
- * 如果客户端处于休眠状态，它就会准备就绪。所有其他州保持不变。
- * 下一个就绪的客户端及其项的集合可以使用nextWorkBlock（collection，max）检索（使该客户端正在进行中）。
- * 正在进行的客户端可以使用finishWorkBlock（K）完成（处理一批项目）。然后，它要么处于休眠状态，要么处于就绪状态，
- * 这取决于它的工作项队列是空的还是否。如果客户端有排队的项目，它要么正在进行中，要么已经就绪，但不能两者兼而有之。
- * 工作完成后，如果有进一步的工作，它可能会被标记为准备就绪，如果没有，则标记为休眠。
- * 对于一个不活跃的客户来说，从来没有任何工作。客户端可以使用unregisterKey（K）进行注销，
- * 这会将客户端从状态的所有部分以及与之存储的任何项目队列中删除。所有客户端都可以使用unregistrAllKey（）进行注销。
+ *            <p>
+ *            <p>
+ *            必须使用registerKey（K）注册K类型的对象，
+ *            然后它们成为客户端，并为每个客户端存储一个项目队列（W类型）。
+ *            每个客户端都有一个状态，该状态恰好是休眠、进行中或就绪状态之一。
+ *            注册后，客户立即处于休眠状态。可以使用addWorkItem（Object，Object）将项目（单独）添加到客户端的队列（末尾）。
+ *            如果客户端处于休眠状态，它就会准备就绪。所有其他州保持不变。
+ *            下一个就绪的客户端及其项的集合可以使用nextWorkBlock（collection，max）检索（使该客户端正在进行中）。
+ *            正在进行的客户端可以使用finishWorkBlock（K）完成（处理一批项目）。然后，它要么处于休眠状态，要么处于就绪状态，
+ *            这取决于它的工作项队列是空的还是否。如果客户端有排队的项目，它要么正在进行中，要么已经就绪，但不能两者兼而有之。
+ *            工作完成后，如果有进一步的工作，它可能会被标记为准备就绪，如果没有，则标记为休眠。
+ *            对于一个不活跃的客户来说，从来没有任何工作。客户端可以使用unregisterKey（K）进行注销，
+ *            这会将客户端从状态的所有部分以及与之存储的任何项目队列中删除。所有客户端都可以使用unregistrAllKey（）进行注销。
  */
 public class WorkPool<K, W> {
     private static final int MAX_QUEUE_LENGTH = 1000;
 
-    /** An injective queue of <i>ready</i> clients. */
+    /**
+     * An injective queue of <i>ready</i> clients.
+     */
     private final SetQueue<K> ready = new SetQueue<K>(); // 准备处理的客户端集合
-    /** The set of clients which have work <i>in progress</i>. */ // 正在处理中的客户端集合
+    /**
+     * The set of clients which have work <i>in progress</i>.
+     */ // 正在处理中的客户端集合
     private final Set<K> inProgress = new HashSet<K>();
-    /** The pool of registered clients, with their work queues. */     // 每一个channel（client）拥有一个队列
-    private final Map<K, VariableLinkedBlockingQueue<W>> pool = new HashMap<K, VariableLinkedBlockingQueue<W>>();
-    /** Those keys which want limits to be removed. We do not limit queue size if this is non-empty. */
+    /**
+     * The pool of registered clients, with their work queues.
+     */     // 每一个channel（？？）拥有一个队列，同一个AMQConnection上会有多个连接吗？？
+    private final Map<K, VariableLinkedBlockingQueue<W>> pool = new HashMap<>();
+    /**
+     * Those keys which want limits to be removed. We do not limit queue size if this is non-empty.
+     */
     // 那些希望移除限制的键。如果这个集合非空，我们将不限制队列大小
     private final Set<K> unlimited = new HashSet<K>();
     private final BiConsumer<VariableLinkedBlockingQueue<W>, W> enqueueingCallback;
@@ -106,6 +115,7 @@ public class WorkPool<K, W> {
      * Add client <code><b>key</b></code> to pool of item queues, with an empty queue.
      * A client is initially <i>dormant</i>.
      * No-op if <code><b>key</b></code> already present.  将客户端key添加到项队列池中，并初始化为空队列。客户端初始状态为休眠。如果key已经存在，则不进行操作
+     *
      * @param key client to add to pool
      */
     public void registerKey(K key) {
@@ -140,6 +150,7 @@ public class WorkPool<K, W> {
 
     /**
      * Remove client from pool and from any other state. Has no effect if client already absent.
+     *
      * @param key of client to unregister
      */
     public void unregisterKey(K key) {
@@ -168,7 +179,8 @@ public class WorkPool<K, W> {
      * and transfer a collection of that client's items to process.
      * Mark client <i>in progress</i>.
      * If there is no <i>ready</i> client, return <code><b>null</b></code>.
-     * @param to collection object in which to transfer items
+     * 从休眠队列key（channel），并且将key存入表示处理中的队列里，在将该key（channel）的所有任务都移到集合中，外部会处理这里任务
+     * @param to   collection object in which to transfer items
      * @param size max number of items to transfer
      * @return key of client to whom items belong, or <code><b>null</b></code> if there is none.
      */
@@ -185,8 +197,9 @@ public class WorkPool<K, W> {
 
     /**
      * Private implementation of <code><b>drainTo</b></code> (not implemented for <code><b>LinkedList&lt;W&gt;</b></code>s).
-     * @param deList to take (poll) elements from
-     * @param c to add elements to
+     *
+     * @param deList      to take (poll) elements from
+     * @param c           to add elements to
      * @param maxElements to take from deList
      * @return number of elements actually taken
      */
@@ -202,11 +215,13 @@ public class WorkPool<K, W> {
         return n;
     }
 
-    /** 为特定客户端添加（入队）一个item。如果客户端未注册，则不进行更改并返回 false。如果客户端处于休眠状态，则将其标记为就绪。
+    /**
+     * 为特定客户端添加（入队）一个item。如果客户端未注册，则不进行更改并返回 false。如果客户端处于休眠状态，则将其标记为就绪。
      * Add (enqueue) an item for a specific client.
      * No change and returns <code><b>false</b></code> if client not registered.
      * If <i>dormant</i>, the client will be marked <i>ready</i>.
-     * @param key the client to add to the work item to
+     *
+     * @param key  the client to add to the work item to
      * @param item the work item to add to the client queue
      * @return <code><b>true</b></code> if and only if the client is marked <i>ready</i>
      * &mdash; <i>as a result of this work item</i>
@@ -221,6 +236,7 @@ public class WorkPool<K, W> {
             enqueueingCallback.accept(queue, item); // item是一个Runnable或者其他类型
 
             synchronized (this) {
+                // 客户端处于睡眠中
                 if (isDormant(key)) { // 客户端已经注册 && 没有处理中 && 没有准备好
                     dormantToReady(key); // 将客户端标记为准备：休眠状态转变为准备状态
                     return true;
@@ -230,12 +246,16 @@ public class WorkPool<K, W> {
         return false;
     }
 
-    /** 标记完成工作的客户端不再处于进行中状态。如果客户端未注册或未处于进行中状态，将抛出异常。如果客户端有更多的工作项，它将被标记为就绪；否则，它将被标记为休眠
+    /**
+     * 标记完成工作的客户端不再处于进行中状态。如果客户端未注册或未处于进行中状态，将抛出异常。如果客户端有更多的工作项，它将被标记为就绪；否则，它将被标记为休眠
      * Set client no longer <i>in progress</i>.
      * Ignore unknown clients (and return <code><b>false</b></code>).
+     *
      * @param key client that has finished work
      * @return <code><b>true</b></code> if and only if client becomes <i>ready</i>
      * @throws IllegalStateException if registered client not <i>in progress</i>
+     *                               <p>
+     *                               返回值表示当前客户端的任务是都已经全部处理完毕，如果还有任务返回true
      */
     public boolean finishWorkBlock(K key) {
         synchronized (this) {
@@ -261,15 +281,42 @@ public class WorkPool<K, W> {
     }
 
     /* State identification functions */
-    private boolean isInProgress(K key){ return this.inProgress.contains(key); }
-    private boolean isReady(K key){ return this.ready.contains(key); }
-    private boolean isRegistered(K key) { return this.pool.containsKey(key); }
-    private boolean isDormant(K key){ return !isInProgress(key) && !isReady(key) && isRegistered(key); }
+    private boolean isInProgress(K key) {
+        return this.inProgress.contains(key);
+    }
+
+    private boolean isReady(K key) {
+        return this.ready.contains(key);
+    }
+
+    private boolean isRegistered(K key) {
+        return this.pool.containsKey(key);
+    }
+
+    private boolean isDormant(K key) {
+        return !isInProgress(key) && !isReady(key) && isRegistered(key);
+    }
 
     /* State transition methods - all assume key registered */
-    private void inProgressToReady(K key){ this.inProgress.remove(key); this.ready.addIfNotPresent(key); }
-    private void inProgressToDormant(K key){ this.inProgress.remove(key); }
-    private void dormantToReady(K key){ this.ready.addIfNotPresent(key); }
+
+    /**
+     * 首先，从 "inProgress" 集合中移除指定的客户端键值 "key"。这一步表示客户端不再处于 "in progress" 状态。
+     * 然后，尝试将该客户端键值添加到 "ready" 集合中，但是只有在 "ready" 集合中不存在该键值时才会添加。这一步表示将客户端标记为 "ready"
+     *
+     * @param key
+     */
+    private void inProgressToReady(K key) {
+        this.inProgress.remove(key);
+        this.ready.addIfNotPresent(key);
+    }
+
+    private void inProgressToDormant(K key) {
+        this.inProgress.remove(key);
+    }
+
+    private void dormantToReady(K key) {
+        this.ready.addIfNotPresent(key);
+    }
 
     /* Basic work selector and state transition step */
     private K readyToInProgress() {

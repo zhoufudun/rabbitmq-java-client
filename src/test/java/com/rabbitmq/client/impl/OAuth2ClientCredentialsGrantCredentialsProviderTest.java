@@ -24,6 +24,7 @@ import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.eclipse.jetty.http.HttpVersion;
+import org.eclipse.jetty.http.MimeTypes;
 import org.eclipse.jetty.server.*;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 import org.eclipse.jetty.server.handler.ContextHandler;
@@ -54,6 +55,9 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * read
+ */
 public class OAuth2ClientCredentialsGrantCredentialsProviderTest {
 
     Server server;
@@ -100,7 +104,7 @@ public class OAuth2ClientCredentialsGrantCredentialsProviderTest {
 
         ContextHandler context = new ContextHandler();
         context.setContextPath("/uaa/oauth/token");
-        context.setHandler(new AbstractHandler() {
+        context.setHandler(new AbstractHandler() { // 默认post请求？？
 
             @Override
             public void handle(String s, Request request, HttpServletRequest httpServletRequest, HttpServletResponse response)
@@ -114,6 +118,15 @@ public class OAuth2ClientCredentialsGrantCredentialsProviderTest {
 
                 httpParameters.set(request.getParameterMap());
 
+                /**
+                 * {
+                 *   "access_token" : "f012434c-ad13-422e-9ffc-da93598be4f4",
+                 *   "token_type" : "bearer",
+                 *   "expires_in" : 60,
+                 *   "scope" : "clients.read emails.write scim.userids password.write idps.write notifications.write oauth.login scim.write critical_notifications.write",
+                 *   "jti" : "18c1b1dfdda04382a8bcc14d077b71dd"
+                 * }
+                 */
                 String json = sampleJsonToken(accessToken.get(), expiresIn);
 
                 response.setStatus(HttpServletResponse.SC_OK);
@@ -131,15 +144,17 @@ public class OAuth2ClientCredentialsGrantCredentialsProviderTest {
         server.setStopTimeout(1000);
         server.start();
 
+        // 以上是模拟服务端（jetty）
+
         OAuth2ClientCredentialsGrantCredentialsProvider provider = new OAuth2ClientCredentialsGrantCredentialsProvider.OAuth2ClientCredentialsGrantCredentialsProviderBuilder()
-                .tokenEndpointUri("http://localhost:" + port + "/uaa/oauth/token/")
+                .tokenEndpointUri("http://localhost:" + port + "/uaa/oauth/token/") // 服务端path
                 .clientId("rabbit_client").clientSecret("rabbit_secret")
                 .grantType("password")
                 .parameter("username", "rabbit_super")
                 .parameter("password", "rabbit_super")
                 .build();
 
-        String password = provider.getPassword();
+        String password = provider.getPassword(); // f012434c-ad13-422e-9ffc-da93598be4f4
 
         assertThat(password).isEqualTo(accessToken.get());
         assertThat(provider.getTimeBeforeExpiration()).isBetween(Duration.ofSeconds(expiresIn - 10), Duration.ofSeconds(expiresIn + 10));
