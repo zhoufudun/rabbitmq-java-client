@@ -6,6 +6,7 @@ import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.test.TestUtils;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentNavigableMap;
@@ -22,11 +23,15 @@ public class PublisherConfirms {
     }
 
     public static void main(String[] args) throws Exception {
-        publishMessagesIndividually();
-        publishMessagesInBatch();
+//        publishMessagesIndividually();
+//        publishMessagesInBatch();
         handlePublishConfirmsAsynchronously();
     }
 
+    /**
+     * read
+     * @throws Exception
+     */
     static void publishMessagesIndividually() throws Exception {
         try (Connection connection = createConnection()) {
             Channel ch = connection.createChannel();
@@ -46,6 +51,10 @@ public class PublisherConfirms {
         }
     }
 
+    /**
+     * read
+     * @throws Exception
+     */
     static void publishMessagesInBatch() throws Exception {
         try (Connection connection = createConnection()) {
             Channel ch = connection.createChannel();
@@ -55,7 +64,7 @@ public class PublisherConfirms {
 
             ch.confirmSelect();
 
-            int batchSize = 100;
+            int batchSize = 10;
             int outstandingMessageCount = 0;
 
             long start = System.nanoTime();
@@ -78,6 +87,11 @@ public class PublisherConfirms {
         }
     }
 
+    /**
+     * read
+     * @throws Exception
+     */
+
     static void handlePublishConfirmsAsynchronously() throws Exception {
         try (Connection connection = createConnection()) {
             Channel ch = connection.createChannel();
@@ -89,14 +103,15 @@ public class PublisherConfirms {
 
             ConcurrentNavigableMap<Long, String> outstandingConfirms = new ConcurrentSkipListMap<>();
 
-            ConfirmCallback cleanOutstandingConfirms = (sequenceNumber, multiple) -> {
-                if (multiple) {
-                    ConcurrentNavigableMap<Long, String> confirmed = outstandingConfirms.headMap(
-                            sequenceNumber, true
-                    );
-                    confirmed.clear();
-                } else {
-                    outstandingConfirms.remove(sequenceNumber);
+            ConfirmCallback cleanOutstandingConfirms = new ConfirmCallback() {
+                @Override
+                public void handle(long sequenceNumber, boolean multiple) throws IOException {
+                    if (multiple) {
+                        ConcurrentNavigableMap<Long, String> confirmed = outstandingConfirms.headMap(sequenceNumber, true);
+                        confirmed.clear();
+                    } else {
+                        outstandingConfirms.remove(sequenceNumber); // 客户端收到的BaseAck消息后，会回调所有的ConfirmListener，将其从outstandingConfirms中删除
+                    }
                 }
             };
 
@@ -106,7 +121,7 @@ public class PublisherConfirms {
                         "Message with body %s has been nack-ed. Sequence number: %d, multiple: %b%n",
                         body, sequenceNumber, multiple
                 );
-                cleanOutstandingConfirms.handle(sequenceNumber, multiple);
+                cleanOutstandingConfirms.handle(sequenceNumber, multiple);  // 客户端收到的BaseAck消息后，会回调所有的ConfirmListener，这里会回调cleanOutstandingConfirms中的handle方法，将其从outstandingConfirms中删除
             });
 
             long start = System.nanoTime();
