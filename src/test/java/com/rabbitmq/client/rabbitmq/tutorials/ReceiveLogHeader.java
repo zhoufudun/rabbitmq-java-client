@@ -5,6 +5,9 @@ import com.rabbitmq.client.*;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * read
+ */
 public class ReceiveLogHeader {
     private static final String EXCHANGE_NAME = "header_test";
 

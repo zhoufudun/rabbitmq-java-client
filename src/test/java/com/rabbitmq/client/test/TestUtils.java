@@ -56,6 +56,10 @@ public class TestUtils {
         } else {
             connectionFactory.useBlockingIo();
         }
+        connectionFactory.setVirtualHost("/zfdtest");
+        connectionFactory.setUsername("guest");
+        connectionFactory.setPassword("guest");
+        connectionFactory.setHost("localhost");
         return connectionFactory;
     }
 

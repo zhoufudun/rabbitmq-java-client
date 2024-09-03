@@ -80,9 +80,10 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
     private final List<BlockedListener> blockedListeners = Collections.synchronizedList(new ArrayList<>());
 
     // Records topology changes
+    // 可key=#method<queue.declare-ok>(queue=2, message-count=0, consumer-count=0) ，value=RecordedQueue
     private final Map<String, RecordedQueue> recordedQueues = Collections.synchronizedMap(new LinkedHashMap<>());
     private final List<RecordedBinding> recordedBindings = Collections.synchronizedList(new ArrayList<>());
-    private final Map<String, RecordedExchange> recordedExchanges = Collections.synchronizedMap(new LinkedHashMap<>());
+    private final Map<String, RecordedExchange> recordedExchanges = Collections.synchronizedMap(new LinkedHashMap<>()); // 本地缓存Exchange
     private final Map<String, RecordedConsumer> consumers = Collections.synchronizedMap(new LinkedHashMap<>());
     private final List<ConsumerRecoveryListener> consumerRecoveryListeners = Collections.synchronizedList(new ArrayList<>());
     private final List<QueueRecoveryListener> queueRecoveryListeners = Collections.synchronizedList(new ArrayList<>());
@@ -1014,7 +1015,7 @@ public class AutorecoveringConnection implements RecoverableConnection, NetworkC
                 source(exchange).
                 destination(queue).
                 routingKey(routingKey).
-                arguments(arguments);
+                arguments(arguments); // RecordedQueueBinding[source=header_test, destination=2, routingKey=ourTestRoutingKey, arguments={}, channel=AMQChannel(amqp://guest@127.0.0.1:5672/,1)]
         this.recordedBindings.remove(binding);
         this.recordedBindings.add(binding);
     }

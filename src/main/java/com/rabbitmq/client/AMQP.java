@@ -1261,12 +1261,12 @@ public interface AMQP {
 
             // Builder for instances of Queue.Bind
             public static final class Builder {
-                private int ticket = 0;
-                private String queue = "";
-                private String exchange;
-                private String routingKey = "";
-                private boolean nowait = false;
-                private Map<String, Object> arguments = null;
+                private int ticket = 0; // 绑定操作的ticket
+                private String queue = ""; // 队列名
+                private String exchange; // 交换机名
+                private String routingKey = ""; // 路由键
+                private boolean nowait = false; // 是否等待服务器响应
+                private Map<String, Object> arguments = null; // 绑定参数
 
                 public Builder() {
                 }

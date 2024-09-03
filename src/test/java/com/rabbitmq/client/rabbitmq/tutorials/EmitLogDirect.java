@@ -5,6 +5,9 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 
+/**
+ * read
+ */
 public class EmitLogDirect {
 
     private static final String EXCHANGE_NAME = "direct_logs";

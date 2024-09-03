@@ -387,7 +387,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
             if (method instanceof Basic.Deliver) {
                 processDelivery(command, (Basic.Deliver) method);
                 return true;
-            } else if (method instanceof Basic.Return) {
+            } else if (method instanceof Basic.Return) { // {#method<basic.return>(reply-code=312, reply-text=NO_ROUTE, exchange=, routing-key=notlikelytoexist), #contentHeader<basic>(content-type=null, content-encoding=null, headers=null, delivery-mode=null, priority=null, correlation-id=null, reply-to=null, expiration=null, message-id=null, timestamp=null, type=null, user-id=null, app-id=null, cluster-id=null), "dummy"}
                 callReturnListeners(command, (Basic.Return) method);
                 return true;
             } else if (method instanceof Channel.Flow) {
