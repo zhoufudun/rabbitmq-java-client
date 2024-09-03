@@ -62,7 +62,6 @@ public class TestUtils {
         connectionFactory.setUsername("guest");
         connectionFactory.setPassword("guest");
         connectionFactory.setHost("localhost");
-        connectionFactory.setVirtualHost("/zfdtest");
         return connectionFactory;
     }
 

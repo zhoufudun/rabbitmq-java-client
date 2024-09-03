@@ -4,6 +4,7 @@ import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
+import com.rabbitmq.client.test.TestUtils;
 
 import java.io.IOException;
 import java.util.UUID;
@@ -16,8 +17,7 @@ public class RPCClient implements AutoCloseable {
     private String requestQueueName = "rpc_queue";
 
     public RPCClient() throws IOException, TimeoutException {
-        ConnectionFactory factory = new ConnectionFactory();
-        factory.setHost("localhost");
+        ConnectionFactory factory = TestUtils.connectionFactory();
 
         connection = factory.newConnection();
         channel = connection.createChannel();
@@ -39,17 +39,17 @@ public class RPCClient implements AutoCloseable {
     public String call(String message) throws IOException, InterruptedException, ExecutionException {
         final String corrId = UUID.randomUUID().toString();
 
-        String replyQueueName = channel.queueDeclare().getQueue();
-        AMQP.BasicProperties props = new AMQP.BasicProperties
+        String replyQueueName = channel.queueDeclare().getQueue(); // 服务端生成一个queue：amq.gen-81xc4J47FjPFkxMUT1d76A
+        AMQP.BasicProperties props = new AMQP.BasicProperties //
                 .Builder()
                 .correlationId(corrId)
-                .replyTo(replyQueueName)
-                .build();
-
+                .replyTo(replyQueueName) // 服务端订阅rpc_queue的消息，收到消息后，将消息的发动给replyQueueName队列，客户端订阅replyQueueName的消息
+                .build(); // #contentHeader<basic>(content-type=null, content-encoding=null, headers=null, delivery-mode=null, priority=null, correlation-id=3094ac0e-133c-4de9-b2eb-a9148cd5628e, reply-to=amq.gen-81xc4J47FjPFkxMUT1d76A, expiration=null, message-id=null, timestamp=null, type=null, user-id=null, app-id=null, cluster-id=null)
+        // 发送到服务端的rpc_queue中
         channel.basicPublish("", requestQueueName, props, message.getBytes("UTF-8"));
 
         final CompletableFuture<String> response = new CompletableFuture<>();
-
+        // 客户端消费订阅的replyQueueName队列的消息（类比于等待应答）
         String ctag = channel.basicConsume(replyQueueName, true, (consumerTag, delivery) -> {
             if (delivery.getProperties().getCorrelationId().equals(corrId)) {
                 response.complete(new String(delivery.getBody(), "UTF-8"));
