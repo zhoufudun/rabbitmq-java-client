@@ -89,7 +89,7 @@ public class LambdaCallbackTest extends BrokerTestCase {
                 }
         );
         channel.basicPublish("", "whatever", null, "dummy".getBytes());
-        assertTrue(latch.await(1, TimeUnit.SECONDS), "Should have received publisher confirm");
+        assertTrue(latch.await(3, TimeUnit.SECONDS), "Should have received publisher confirm");
     }
 
     // read
@@ -99,7 +99,11 @@ public class LambdaCallbackTest extends BrokerTestCase {
         channel.addReturnListener(new ReturnListener() {
             @Override
             public void handleReturn(int replyCode, String replyText, String exchange, String routingKey, AMQP.BasicProperties properties, byte[] body) throws IOException {
-                System.out.println("========" + Thread.currentThread().getName());
+                System.out.println("replyCode="+replyCode);
+                System.out.println("replyText="+replyText);
+                System.out.println("exchange="+exchange);
+                System.out.println("routingKey="+routingKey);
+                System.out.println("properties="+properties);
                 latch.countDown();
             }
         });

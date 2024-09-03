@@ -59,6 +59,10 @@ public class TestUtils {
             connectionFactory.useBlockingIo();
         }
         connectionFactory.setVirtualHost("/zfdtest");
+        connectionFactory.setUsername("guest");
+        connectionFactory.setPassword("guest");
+        connectionFactory.setHost("localhost");
+        connectionFactory.setVirtualHost("/zfdtest");
         return connectionFactory;
     }
 
@@ -242,7 +246,7 @@ public class TestUtils {
         CountDownLatch latch = prepareForRecovery(connection);
 
         // 手动杀进程
-//        Host.closeConnection((NetworkConnection) connection);
+        Host.closeConnection((NetworkConnection) connection);
         connection.close();
         wait(latch);
     }

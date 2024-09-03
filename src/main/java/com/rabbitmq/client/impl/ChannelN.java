@@ -397,7 +397,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
             if (method instanceof Basic.Deliver) {
                 processDelivery(command, (Basic.Deliver) method); // 服务端推送的客户端的订阅的消息
                 return true;
-            } else if (method instanceof Basic.Return) { // 服务端的返回Return信息，此时需要回调客户端的监听器
+            } else if (method instanceof Basic.Return) { // 服务端的返回Return信息，此时需要回调客户端的监听器   // {#method<basic.return>(reply-code=312, reply-text=NO_ROUTE, exchange=, routing-key=notlikelytoexist), #contentHeader<basic>(content-type=null, content-encoding=null, headers=null, delivery-mode=null, priority=null, correlation-id=null, reply-to=null, expiration=null, message-id=null, timestamp=null, type=null, user-id=null, app-id=null, cluster-id=null), "dummy"}
                 callReturnListeners(command, (Basic.Return) method);
                 return true;
             } else if (method instanceof Channel.Flow) { // ？？
@@ -413,7 +413,6 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
                 return true;
             } else if (method instanceof Basic.Ack) {
                 Basic.Ack ack = (Basic.Ack) method;
-                // 回调所有确认ack监听器
                 callConfirmListeners(command, ack);
                 handleAckNack(ack.getDeliveryTag(), ack.getMultiple(), false);
                 return true;
@@ -431,7 +430,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
                 // so return false
                 return false;
             } else if (method instanceof Basic.Cancel) {
-                Basic.Cancel m = (Basic.Cancel) method; // 客户端删除队列，服务端会回复Cancel消息：#method<basic.cancel>(consumer-tag=amq.ctag-OCKYz2h72uwSAaDVpGNOTA, nowait=true)
+                Basic.Cancel m = (Basic.Cancel) method;
                 String consumerTag = m.getConsumerTag();
                 Consumer callback = _consumers.remove(consumerTag);
                 // Not finding any matching consumer isn't necessarily an indication of an issue anywhere.
@@ -480,9 +479,9 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
     }
 
     protected void processDelivery(Command command, Basic.Deliver method) {
-        Basic.Deliver m = method; // #method<basic.deliver>(consumer-tag=amq.ctag-mdxLAH8Y92wolZ5vb2JcPg, delivery-tag=1, redelivered=false, exchange=, routing-key=test)
+        Basic.Deliver m = method;
 
-        Consumer callback = _consumers.get(m.getConsumerTag()); // 通过唯一的消费者标签获取消费者对象
+        Consumer callback = _consumers.get(m.getConsumerTag());
         if (callback == null) {
             if (defaultConsumer == null) {
                 // No handler set. We should blow up as this message
@@ -495,7 +494,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
                 callback = defaultConsumer;
             }
         }
-        // Envelope(deliveryTag=1, redeliver=false, exchange=, routingKey=test)
+
         Envelope envelope = new Envelope(m.getDeliveryTag(),
                 m.getRedelivered(),
                 m.getExchange(),
@@ -504,7 +503,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
             // call metricsCollector before the dispatching (which is async anyway)
             // this way, the message is inside the stats before it is handled
             // in case a manual ack in the callback, the stats will be able to record the ack
-            metricsCollector.consumedMessage(this, m.getDeliveryTag(), m.getConsumerTag()); // 用于统计消息的消费情况。具体来说，它记录了当前通道（channel）消费的消息数量，以及消息的deliveryTag和consumerTag
+            metricsCollector.consumedMessage(this, m.getDeliveryTag(), m.getConsumerTag());
             this.dispatcher.handleDelivery(callback,
                     m.getConsumerTag(),
                     envelope,
@@ -539,7 +538,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
         }
     }
 
-    private void callConfirmListeners(@SuppressWarnings("unused") Command command, Basic.Ack ack) { // ack=#method<basic.ack>(delivery-tag=1, multiple=false)
+    private void callConfirmListeners(@SuppressWarnings("unused") Command command, Basic.Ack ack) {
         try {
             for (ConfirmListener l : this.confirmListeners) {
                 l.handleAck(ack.getDeliveryTag(), ack.getMultiple());
@@ -761,15 +760,15 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
         final long deliveryTag;
         if (nextPublishSeqNo > 0) {
             deliveryTag = getNextPublishSeqNo();
-            unconfirmedSet.add(deliveryTag); // 加入未确认ack集合中，收到ack后会删除
-            nextPublishSeqNo++; // 下一个发布序列号自增
+            unconfirmedSet.add(deliveryTag);
+            nextPublishSeqNo++;
         } else {
             deliveryTag = 0;
         }
         if (props == null) {
-            props = MessageProperties.MINIMAL_BASIC; // #contentHeader<basic>(content-type=null, content-encoding=null, headers=null, delivery-mode=null, priority=null, correlation-id=null, reply-to=null, expiration=null, message-id=null, timestamp=null, type=null, user-id=null, app-id=null, cluster-id=null)
+            props = MessageProperties.MINIMAL_BASIC;
         }
-        AMQP.Basic.Publish publish = new Basic.Publish.Builder() // #method<basic.publish>(ticket=0, exchange=, routing-key=dc2d7197-666d-424a-a233-f4c63f34ee8d, mandatory=false, immediate=false)
+        AMQP.Basic.Publish publish = new Basic.Publish.Builder()
                 .exchange(exchange)
                 .routingKey(routingKey)
                 .mandatory(mandatory)
@@ -1055,8 +1054,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
                 .build()));
     }
 
-    /**
-     * 服务端返回DeclareOk消息
+    /** 服务端返回DeclareOk消息
      * Public API - {@inheritDoc}
      */
     @Override
@@ -1153,7 +1151,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
                         .ifUnused(ifUnused)
                         .ifEmpty(ifEmpty)
                         .build())
-                        .getMethod(); // 构造一个删除队列的命令
+                        .getMethod();
     }
 
     @Override
@@ -1499,22 +1497,22 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
                                boolean noLocal, boolean exclusive, Map<String, Object> arguments,
                                final Consumer callback)
             throws IOException {
-        final Method m = new Basic.Consume.Builder() // #method<basic.consume>(ticket=0, queue=test, consumer-tag=, no-local=false, no-ack=true, exclusive=false, nowait=false, arguments=null)
+        final Method m = new Basic.Consume.Builder()
                 .queue(queue)
                 .consumerTag(consumerTag)
                 .noLocal(noLocal)
-                .noAck(autoAck) // 如果autoAck=true，那么就会告诉服务端这个消息无序消费ack
+                .noAck(autoAck)
                 .exclusive(exclusive)
                 .arguments(arguments)
-                .build(); // 订阅消息
-        BlockingRpcContinuation<String> k = new BlockingRpcContinuation<String>(m) { // 收到订阅的消息的都会回调这里
+                .build();
+        BlockingRpcContinuation<String> k = new BlockingRpcContinuation<String>(m) {
             @Override
             public String transformReply(AMQCommand replyCommand) {
-                String actualConsumerTag = ((Basic.ConsumeOk) replyCommand.getMethod()).getConsumerTag(); // 获取订阅的唯一标识
+                String actualConsumerTag = ((Basic.ConsumeOk) replyCommand.getMethod()).getConsumerTag();
                 Consumer wrappedCallback = observationCollector.basicConsume(queue, consumerTag, callback);
                 _consumers.put(actualConsumerTag, wrappedCallback);
 
-                // need to register consumer in stats before it actually starts consuming 需要在消费者实际开始消费之前在统计系统中注册该消费者
+                // need to register consumer in stats before it actually starts consuming
                 metricsCollector.basicConsume(ChannelN.this, actualConsumerTag, autoAck);
 
                 dispatcher.handleConsumeOk(wrappedCallback, actualConsumerTag);
@@ -1523,14 +1521,14 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
         };
 
 
-        rpc(m, k); // 订阅消息发给远程，并且注册远程的应答回调
+        rpc(m, k);
 
         try {
             if (_rpcTimeout == NO_RPC_TIMEOUT) {
-                return k.getReply(); //
+                return k.getReply();
             } else {
                 try {
-                    return k.getReply(_rpcTimeout); // 如果服务端将订阅成功ack推送给客户端后，客户端的MainLoop线程收到消息，处理消息，将消息设置入BlockingCell，MainLoop线程唤醒本线程，这里会被唤醒，并且将消息获取到返回
+                    return k.getReply(_rpcTimeout);
                 } catch (TimeoutException e) {
                     throw wrapTimeoutException(m, e);
                 }
@@ -1731,11 +1729,11 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
         if (confirmSelectActivated) {
             return new Confirm.SelectOk();
         }
-        if (nextPublishSeqNo == 0) {
-            nextPublishSeqNo = 1;
-        }
-        // #method<confirm.select-ok>()
-        Confirm.SelectOk result = (Confirm.SelectOk) exnWrappingRpc(new Confirm.Select(false)).getMethod();
+
+        if (nextPublishSeqNo == 0) nextPublishSeqNo = 1;
+        Confirm.SelectOk result = (Confirm.SelectOk)
+                exnWrappingRpc(new Confirm.Select(false)).getMethod();
+
         confirmSelectActivated = true;
         return result;
     }
@@ -1778,23 +1776,22 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
     protected void markRpcFinished() {
         _channelLock.lock();
         try {
-            dispatcher.setUnlimited(false); // 可能是用来限制或停止某种资源的分配？？
+            dispatcher.setUnlimited(false);
         } finally {
             _channelLock.unlock();
         }
     }
 
     private void handleAckNack(long seqNo, boolean multiple, boolean nack) {
-        if (multiple) { // multiple 参数决定了确认操作的范围，是单个消息还是多个消息
-            unconfirmedSet.headSet(seqNo + 1).clear(); // 收到了确认消息，将从未确认消息队列中小于seqNo的消息全部移除
+        if (multiple) {
+            unconfirmedSet.headSet(seqNo + 1).clear();
         } else {
-            unconfirmedSet.remove(seqNo); // 收到了确认消息，将从未确认消息队列移除
+            unconfirmedSet.remove(seqNo);
         }
         synchronized (unconfirmedSet) {
             onlyAcksReceived = onlyAcksReceived && !nack;
-            if (unconfirmedSet.isEmpty()) { // 从未确认消息队列中没有消息了，唤醒所有等待的线程
+            if (unconfirmedSet.isEmpty())
                 unconfirmedSet.notifyAll();
-            }
         }
     }
 
