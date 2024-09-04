@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.test.TestUtils;
 import com.rabbitmq.client.test.TestUtils.CallableFunction;
+
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -36,18 +37,18 @@ import org.junit.jupiter.params.provider.MethodSource;
 public class Nack extends AbstractRejectTest {
 
     public static Object[] queueCreators() {
-        return new Object[] {
-            (CallableFunction<Channel, String>) channel -> {
-                String q = UUID.randomUUID().toString();
-                channel.queueDeclare(q, true, false, false, Collections.singletonMap("x-queue-type", "quorum"));
-                return q;
-            },
-            (CallableFunction<Channel, String>) channel -> {
-                String q = UUID.randomUUID().toString();
-                channel.queueDeclare(q, true, false, false, Collections.singletonMap("x-queue-type", "classic"));
-                return q;
-            }};
-        }
+        return new Object[]{
+                (CallableFunction<Channel, String>) channel -> {
+                    String q = UUID.randomUUID().toString();
+                    channel.queueDeclare(q, true, false, false, Collections.singletonMap("x-queue-type", "quorum"));
+                    return q;
+                },
+                (CallableFunction<Channel, String>) channel -> {
+                    String q = UUID.randomUUID().toString();
+                    channel.queueDeclare(q, true, false, false, Collections.singletonMap("x-queue-type", "classic"));
+                    return q;
+                }};
+    }
 
     @ParameterizedTest
     @MethodSource("queueCreators")
@@ -171,7 +172,7 @@ public class Nack extends AbstractRejectTest {
         }
 
         long lastTag = -1;
-        for(int x = 0; x < messages.length; x++) {
+        for (int x = 0; x < messages.length; x++) {
             QueueingConsumer.Delivery delivery = c.nextDelivery();
             String m = new String(delivery.getBody());
             assertTrue(msgSet.remove(m), "Unexpected message");

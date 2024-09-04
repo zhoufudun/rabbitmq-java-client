@@ -760,8 +760,8 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
         final long deliveryTag;
         if (nextPublishSeqNo > 0) {
             deliveryTag = getNextPublishSeqNo();
-            unconfirmedSet.add(deliveryTag);
-            nextPublishSeqNo++;
+            unconfirmedSet.add(deliveryTag); // 发送消息后将消息加入unconfirmedSet集合中，等到收到应答在从集合中删除
+            nextPublishSeqNo++; // 下一次发送消息时，deliveryTag自增1
         } else {
             deliveryTag = 0;
         }
@@ -773,7 +773,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
                 .routingKey(routingKey)
                 .mandatory(mandatory)
                 .immediate(immediate)
-                .build();
+                .build(); // #method<basic.publish>(ticket=0, exchange=, routing-key=f0650b3d-9ac2-4203-af0d-a623212e6127, mandatory=false, immediate=false)
         try {
             ObservationCollector.PublishCall publishCall = properties -> {
                 AMQCommand command = new AMQCommand(publish, properties, body);
@@ -1267,22 +1267,23 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
     public GetResponse basicGet(String queue, boolean autoAck)
             throws IOException {
         validateQueueNameLength(queue);
-        AMQCommand replyCommand = exnWrappingRpc(new Basic.Get.Builder()
-                .queue(queue)
-                .noAck(autoAck)
-                .build());
+        // 主动从指定的队列中获取消息，并设置是否自动确认消息
+        AMQCommand replyCommand = exnWrappingRpc(new Basic.Get.Builder() // 发送命令
+                .queue(queue) // 队列名称
+                .noAck(autoAck) // noAck=true 表示不确认消息
+                .build()); // {#method<basic.get-ok>(delivery-tag=1, redelivered=false, exchange=, routing-key=30ac9ba1-4398-4935-a1fb-c69dd913896f, message-count=1), #contentHeader<basic>(content-type=text/plain, content-encoding=null, headers=null, delivery-mode=1, priority=0, correlation-id=null, reply-to=null, expiration=null, message-id=null, timestamp=null, type=null, user-id=null, app-id=null, cluster-id=null), "1"}
         return this.observationCollector.basicGet(() -> {
-            Method method = replyCommand.getMethod();
+            Method method = replyCommand.getMethod(); // #method<basic.get-ok>(delivery-tag=1, redelivered=false, exchange=, routing-key=30ac9ba1-4398-4935-a1fb-c69dd913896f, message-count=1)
 
             if (method instanceof Basic.GetOk) {
-                Basic.GetOk getOk = (Basic.GetOk) method;
+                Basic.GetOk getOk = (Basic.GetOk) method; // #method<basic.get-ok>(delivery-tag=1, redelivered=false, exchange=, routing-key=30ac9ba1-4398-4935-a1fb-c69dd913896f, message-count=1)
                 Envelope envelope = new Envelope(getOk.getDeliveryTag(),
                         getOk.getRedelivered(),
                         getOk.getExchange(),
-                        getOk.getRoutingKey());
-                BasicProperties props = (BasicProperties) replyCommand.getContentHeader();
-                byte[] body = replyCommand.getContentBody();
-                int messageCount = getOk.getMessageCount();
+                        getOk.getRoutingKey()); // Envelope(deliveryTag=1, redeliver=false, exchange=, routingKey=30ac9ba1-4398-4935-a1fb-c69dd913896f)
+                BasicProperties props = (BasicProperties) replyCommand.getContentHeader(); // #contentHeader<basic>(content-type=text/plain, content-encoding=null, headers=null, delivery-mode=1, priority=0, correlation-id=null, reply-to=null, expiration=null, message-id=null, timestamp=null, type=null, user-id=null, app-id=null, cluster-id=null)
+                byte[] body = replyCommand.getContentBody(); // 消息体内容=1
+                int messageCount = getOk.getMessageCount(); // 消息个数=1
 
                 metricsCollector.consumedMessage(this, getOk.getDeliveryTag(), autoAck);
 
@@ -1632,6 +1633,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
 
     /**
      * Public API - {@inheritDoc}
+     * 取消一个消费者，取消订阅
      */
     @Override
     public void basicCancel(final String consumerTag)
@@ -1641,7 +1643,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
             LOGGER.warn("Tried to cancel consumer with unknown tag {}", consumerTag);
             return;
         }
-
+        // 取消后，将consumer从map中删除，防止重复取消
         final Method m = new Basic.Cancel(consumerTag, false);
         BlockingRpcContinuation<Consumer> k = new BlockingRpcContinuation<Consumer>(m) {
             @Override
@@ -1731,8 +1733,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
         }
 
         if (nextPublishSeqNo == 0) nextPublishSeqNo = 1;
-        Confirm.SelectOk result = (Confirm.SelectOk)
-                exnWrappingRpc(new Confirm.Select(false)).getMethod();
+        Confirm.SelectOk result = (Confirm.SelectOk) exnWrappingRpc(new Confirm.Select(false)).getMethod(); // #method<confirm.select-ok>()
 
         confirmSelectActivated = true;
         return result;
@@ -1784,14 +1785,14 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
 
     private void handleAckNack(long seqNo, boolean multiple, boolean nack) {
         if (multiple) {
-            unconfirmedSet.headSet(seqNo + 1).clear();
+            unconfirmedSet.headSet(seqNo + 1).clear(); // 移除集合中所有序列号小于或等于 seqNo 的元素。这表明所有这些消息都已经被确认或否认
         } else {
-            unconfirmedSet.remove(seqNo);
+            unconfirmedSet.remove(seqNo); // 收到消息后从集合中删除序列号为 seqNo 的元素。这表明该消息已经被确认或否认
         }
         synchronized (unconfirmedSet) {
-            onlyAcksReceived = onlyAcksReceived && !nack;
-            if (unconfirmedSet.isEmpty())
-                unconfirmedSet.notifyAll();
+            onlyAcksReceived = onlyAcksReceived && !nack; // 如果 nack 为 true，说明收到的是否认消息，将 onlyAcksReceived 设置为 false；否则，将 onlyAcksReceived 设置为 true
+            if (unconfirmedSet.isEmpty()) // 如果集合为空，说明所有消息都已经被确认或否认，唤醒所有等待的线程
+                unconfirmedSet.notifyAll(); // 唤醒所有等待的线程
         }
     }
 

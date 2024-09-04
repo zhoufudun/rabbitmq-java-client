@@ -73,7 +73,6 @@ public class BrokerTestCase {
             this.brokerVersion = currentVersion(this.connection.getServerProperties().get("version").toString());
         }
         openChannel();
-
         createResources();
     }
 

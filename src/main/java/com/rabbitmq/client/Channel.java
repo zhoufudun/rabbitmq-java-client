@@ -236,6 +236,11 @@ public interface Channel extends ShutdownNotifier, AutoCloseable {
      *                      will deliver, 0 if unlimited
      * @throws java.io.IOException if an error is encountered
      * @see #basicQos(int, int, boolean)
+     *
+     *
+     * channel.basicQos(0); 这行代码在 RabbitMQ 中用于设置消费者的 Quality of Service（QoS）参数。具体来说，它设置了消费者在一次请求中可以接收的最大消息数量为 0。这意味着消费者每次只能接收一条消息，并且在处理完这条消息并发送确认之前，不会接收下一条消息。
+     * 在 RabbitMQ 中，QoS 参数用于控制消息传递的速度和数量，以确保消费者能够以适当的速度处理消息，避免消息的积压或者消费者过载。通过设置 basicQos 方法的参数，你可以调整消费者的行为，例如设置预取数量（prefetchCount）、全局 QoS（global）等。
+     * 在这个特定的例子中，channel.basicQos(0); 表示消费者每次只预取一条消息，这通常用于需要对每个消息进行实时处理的场景，例如实时聊天应用或者对延迟非常敏感的系统
      */
     void basicQos(int prefetchCount) throws IOException;
 

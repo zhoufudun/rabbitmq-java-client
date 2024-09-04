@@ -44,7 +44,7 @@ public class AMQCommand implements Command {
     public static final int EMPTY_FRAME_SIZE = 8; // 一个空贞构成
 
     /** The assembler for this command - synchronised on - contains all the state */
-    private final CommandAssembler assembler;
+    private final CommandAssembler assembler; // #field<assembler>
     private final Lock assemblerLock = new ReentrantLock();
 
     AMQCommand(int maxBodyLength) {

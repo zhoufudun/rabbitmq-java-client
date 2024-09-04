@@ -32,10 +32,10 @@ public class Envelope {
      * @param routingKey the associated routing key
      */
     public Envelope(long deliveryTag, boolean redeliver, String exchange, String routingKey) {
-        this._deliveryTag = deliveryTag;
-        this._redeliver = redeliver;
-        this._exchange = exchange;
-        this._routingKey = routingKey;
+        this._deliveryTag = deliveryTag; //
+        this._redeliver = redeliver; //
+        this._exchange = exchange; //
+        this._routingKey = routingKey; //
     }
 
     /**
@@ -51,7 +51,7 @@ public class Envelope {
      * hint as to whether this message may have been delivered before (but not
      * acknowledged). If the flag is not set, the message definitely has not
      * been delivered before. If it is set, it may have been delivered before.
-     *
+     * 此消息是否可能之前已经被投递过（但未被确认）的提示。如果该标志未设置，则消息肯定之前未被投递过。如果设置了该标志，则消息可能之前已经被投递过
      * @return the redelivery flag
      */
     public boolean isRedeliver() {

@@ -187,7 +187,7 @@ public class AutorecoveringChannel implements RecoverableChannel {
 
     @Override
     public void basicQos(int prefetchSize, int prefetchCount, boolean global) throws IOException {
-        if (global) {
+        if (global) { // 全局预取
             this.prefetchCountGlobal = prefetchCount;
         } else {
             this.prefetchCountConsumer = prefetchCount;

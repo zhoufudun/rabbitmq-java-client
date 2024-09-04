@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.test.TestUtils;
 import com.rabbitmq.client.test.TestUtils.CallableFunction;
+
 import java.util.Collections;
 
 import java.util.UUID;
@@ -30,51 +31,52 @@ import com.rabbitmq.client.QueueingConsumer;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-public class Reject extends AbstractRejectTest
-{
+/**
+ * read
+ */
+public class Reject extends AbstractRejectTest {
 
     public static Object[] reject() {
-        return new Object[] {
-            (CallableFunction<Channel, String>) channel -> {
-                String q = UUID.randomUUID().toString();
-                channel.queueDeclare(q, true, false, false, Collections.singletonMap("x-queue-type", "quorum"));
-                return q;
-            },
-            (CallableFunction<Channel, String>) channel -> {
-                String q = UUID.randomUUID().toString();
-                channel.queueDeclare(q, true, false, false, Collections.singletonMap("x-queue-type", "classic"));
-                return q;
-            }};
+        return new Object[]{
+                (CallableFunction<Channel, String>) channel -> {
+                    String quorum = channel.queueDeclare(UUID.randomUUID().toString(), true, false, false, Collections.singletonMap("x-queue-type", "quorum")).getQueue();
+                    return quorum;
+                },
+                (CallableFunction<Channel, String>) channel -> {
+                    String classic = channel.queueDeclare(UUID.randomUUID().toString(), true, false, false, Collections.singletonMap("x-queue-type", "classic")).getQueue();
+                    return classic;
+                }};
     }
 
     @ParameterizedTest
-    @MethodSource
+    @MethodSource(value = "reject")
     public void reject(TestUtils.CallableFunction<Channel, String> queueCreator)
-        throws Exception
-    {
-        String q = queueCreator.apply(channel);
+            throws Exception {
+        String queue = queueCreator.apply(channel);
 
-        channel.confirmSelect();
+        channel.confirmSelect(); // 设置需要等待确认
 
         byte[] m1 = "1".getBytes();
         byte[] m2 = "2".getBytes();
 
-        basicPublishVolatile(m1, q);
-        basicPublishVolatile(m2, q);
+        basicPublishVolatile(m1, queue);
+        basicPublishVolatile(m2, queue);
 
-        channel.waitForConfirmsOrDie(1000);
+        channel.waitForConfirmsOrDie(1000); // 等待确认，超时会断开connection
 
-        long tag1 = checkDelivery(channel.basicGet(q, false), m1, false);
-        long tag2 = checkDelivery(channel.basicGet(q, false), m2, false);
-        QueueingConsumer c = new QueueingConsumer(secondaryChannel);
-        String consumerTag = secondaryChannel.basicConsume(q, false, c);
-        channel.basicReject(tag2, true);
-        long tag3 = checkDelivery(c.nextDelivery(), m2, true);
-        secondaryChannel.basicCancel(consumerTag);
-        secondaryChannel.basicReject(tag3, false);
-        assertNull(channel.basicGet(q, false));
-        channel.basicAck(tag1, false);
-        channel.basicReject(tag3, false);
+        long tag1 = checkDelivery(channel.basicGet(queue, false), m1, false);
+        long tag2 = checkDelivery(channel.basicGet(queue, false), m2, false);
+
+        QueueingConsumer consumer = new QueueingConsumer(secondaryChannel);
+        String consumerTag = secondaryChannel.basicConsume(queue, false, consumer);
+        channel.basicReject(tag2, true); // 拒绝第二个消息，并且重新入队列
+        long tag3 = checkDelivery(consumer.nextDelivery(), m2, true); // 此时再次消费者获取到的消息是m2，并且是重新入队列的消息
+
+        secondaryChannel.basicCancel(consumerTag); // 取消消费者
+        secondaryChannel.basicReject(tag3, false); // 拒绝第三个消息，并且不重新入队列
+        assertNull(channel.basicGet(queue, false)); // 此时队列中没有消息，应为第三个消息被拒绝，并且不重新入队列
+        channel.basicAck(tag1, false); // 确认第一个消息
+        channel.basicReject(tag3, false);// 拒绝第三个消息，并且不重新入队列
         expectError(AMQP.PRECONDITION_FAILED);
     }
 }

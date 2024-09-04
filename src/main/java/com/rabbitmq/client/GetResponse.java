@@ -29,13 +29,13 @@ public class GetResponse {
 
     /**
      * Construct a {@link GetResponse} with the specified construction parameters
-     * @param envelope the {@link Envelope}
-     * @param props message properties
-     * @param body the message body
+     *
+     * @param envelope     the {@link Envelope}
+     * @param props        message properties
+     * @param body         the message body
      * @param messageCount the server's most recent estimate of the number of messages remaining on the queue
      */
-    public GetResponse(Envelope envelope, BasicProperties props, byte[] body, int messageCount)
-    {
+    public GetResponse(Envelope envelope, BasicProperties props, byte[] body, int messageCount) {
         this.envelope = envelope;
         this.props = props;
         this.body = body;
@@ -44,6 +44,7 @@ public class GetResponse {
 
     /**
      * Get the {@link Envelope} included in this response
+     *
      * @return the envelope
      */
     public Envelope getEnvelope() {
@@ -52,6 +53,7 @@ public class GetResponse {
 
     /**
      * Get the {@link BasicProperties} included in this response
+     *
      * @return the properties
      */
     public BasicProperties getProps() {
@@ -60,6 +62,7 @@ public class GetResponse {
 
     /**
      * Get the message body included in this response
+     *
      * @return the message body
      */
     public byte[] getBody() {

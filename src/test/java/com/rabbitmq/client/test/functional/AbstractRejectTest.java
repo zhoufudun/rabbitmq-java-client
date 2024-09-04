@@ -44,7 +44,6 @@ abstract class AbstractRejectTest extends BrokerTestCase {
             throws IOException, TimeoutException {
         super.setUp(info);
         secondaryChannel = connection.createChannel();
-
     }
 
     @AfterEach
@@ -59,21 +58,18 @@ abstract class AbstractRejectTest extends BrokerTestCase {
     }
 
     protected long checkDelivery(QueueingConsumer.Delivery d,
-                                 byte[] msg, boolean redelivered)
-    {
+                                 byte[] msg, boolean redelivered) {
         assertNotNull(d);
         return checkDelivery(d.getEnvelope(), d.getBody(), msg, redelivered);
     }
 
-    protected long checkDelivery(GetResponse r, byte[] msg, boolean redelivered)
-    {
+    protected long checkDelivery(GetResponse r, byte[] msg, boolean redelivered) {
         assertNotNull(r);
         return checkDelivery(r.getEnvelope(), r.getBody(), msg, redelivered);
     }
 
     protected long checkDelivery(Envelope e, byte[] m,
-                                 byte[] msg, boolean redelivered)
-    {
+                                 byte[] msg, boolean redelivered) {
         assertNotNull(e);
         assertTrue(Arrays.equals(m, msg));
         assertEquals(e.isRedeliver(), redelivered);
