@@ -1505,7 +1505,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
                 .noAck(autoAck)
                 .exclusive(exclusive)
                 .arguments(arguments)
-                .build();
+                .build(); // #method<basic.consume>(ticket=0, queue=amq.gen-fVtod-ikKh0y31TWao0p9w, consumer-tag=, no-local=false, no-ack=true, exclusive=false, nowait=false, arguments=null)
         BlockingRpcContinuation<String> k = new BlockingRpcContinuation<String>(m) {
             @Override
             public String transformReply(AMQCommand replyCommand) {
@@ -1516,7 +1516,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
                 // need to register consumer in stats before it actually starts consuming
                 metricsCollector.basicConsume(ChannelN.this, actualConsumerTag, autoAck);
 
-                dispatcher.handleConsumeOk(wrappedCallback, actualConsumerTag);
+                dispatcher.handleConsumeOk(wrappedCallback, actualConsumerTag); // 收到服务端的订阅应答
                 return actualConsumerTag;
             }
         };
@@ -1767,7 +1767,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
         _channelLock.lock();
         try {
             super.enqueueRpc(k);
-            dispatcher.setUnlimited(true);
+            dispatcher.setUnlimited(true); // channel绑定的队列打消息大小不受限制
         } finally {
             _channelLock.unlock();
         }

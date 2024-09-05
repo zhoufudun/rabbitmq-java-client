@@ -544,7 +544,7 @@ public class AutorecoveringChannel implements RecoverableChannel {
 
     @Override
     public String basicConsume(String queue, boolean autoAck, String consumerTag, boolean noLocal, boolean exclusive, Map<String, Object> arguments, Consumer callback) throws IOException {
-        final String result = delegate.basicConsume(queue, autoAck, consumerTag, noLocal, exclusive, arguments, callback);
+        final String result = delegate.basicConsume(queue, autoAck, consumerTag, noLocal, exclusive, arguments, callback); // 消费者注册成功后，服务端返回的consumerTag作为消费者唯一标识
         recordConsumer(result, queue, autoAck, exclusive, arguments, callback);
         return result;
     }

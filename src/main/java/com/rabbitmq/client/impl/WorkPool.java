@@ -129,14 +129,14 @@ public class WorkPool<K, W> {
 
     public synchronized void limit(K key) {
         unlimited.remove(key);
-        if (unlimited.isEmpty()) {
+        if (unlimited.isEmpty()) { // channel对应的queue不限制，设置最大值=1000大小
             setCapacities(MAX_QUEUE_LENGTH);
         }
     }
 
     public synchronized void unlimit(K key) {
         unlimited.add(key);
-        if (!unlimited.isEmpty()) {
+        if (!unlimited.isEmpty()) { // channel对应的queue不受限制，设置最大值=2^31-1
             setCapacities(Integer.MAX_VALUE);
         }
     }

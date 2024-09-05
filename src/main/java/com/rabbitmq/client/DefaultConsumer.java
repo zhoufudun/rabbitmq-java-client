@@ -48,7 +48,7 @@ public class DefaultConsumer implements Consumer {
      */
     @Override
     public void handleConsumeOk(String consumerTag) {
-        this._consumerTag = consumerTag;
+        this._consumerTag = consumerTag; // 记录consumerTag（次消费者在服务端的唯一标识）
     }
 
     /**

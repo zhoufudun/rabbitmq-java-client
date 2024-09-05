@@ -71,7 +71,7 @@ final class ConsumerDispatcher {
         this.workService.setUnlimited(channel, unlimited);
     }
 
-    // MainLoop线程收到订阅的消息，会调用这里，这里必须异步提交到线程池进行正在的客户端消费处理，否者会阻塞MainLoop线程
+    // MainLoop线程收到订阅的消息，会调用这里，这里必须异步提交到线程池再进行真正的客户端消费处理，否者会阻塞MainLoop线程
     public void handleConsumeOk(final Consumer delegate, // com.rabbitmq.client.impl.recovery.AutorecoveringChannel$2
                                 final String consumerTag) {
         executeUnlessShuttingDown(
