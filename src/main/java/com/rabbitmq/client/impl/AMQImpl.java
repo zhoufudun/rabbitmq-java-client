@@ -3518,14 +3518,14 @@ public class AMQImpl implements AMQP {
 
     public static class Basic {
         public static final int INDEX = 60;
-
+        // 一次性消费几个消息
         public static class Qos
                 extends Method
                 implements AMQP.Basic.Qos {
             public static final int INDEX = 10;
 
             private final int prefetchSize;
-            private final int prefetchCount;
+            private final int prefetchCount; // 一次性消费几个消息
             private final boolean global;
 
             public int getPrefetchSize() {
