@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -32,10 +33,13 @@ import org.junit.jupiter.api.Test;
 
 import com.rabbitmq.client.test.BrokerTestCase;
 
+/**
+ * read
+ */
 public class Recover extends BrokerTestCase {
 
     String queue;
-    final byte[] body = "message".getBytes();
+    final byte[] body = "message1".getBytes();
 
     public void createResources() throws IOException {
         AMQP.Queue.DeclareOk ok = channel.queueDeclare();
@@ -46,10 +50,20 @@ public class Recover extends BrokerTestCase {
         void recover(Channel channel) throws IOException;
     }
 
+
+    @Test
+    public void redeliveryOnRecover() throws IOException, InterruptedException {
+        verifyRedeliverOnRecover(recoverSync);
+    }
+
+    @Test
+    public void redeliverOnRecoverConvenience() throws IOException, InterruptedException {
+        verifyRedeliverOnRecover(recoverSyncConvenience);
+    }
+
     // The AMQP specification under-specifies the behaviour when
     // requeue=false.  So we can't really test any scenarios for
     // requeue=false.
-
     void verifyRedeliverOnRecover(RecoverCallback call) throws IOException, InterruptedException {
         QueueingConsumer consumer = new QueueingConsumer(channel);
         channel.basicConsume(queue, false, consumer); // require acks.
@@ -61,31 +75,47 @@ public class Recover extends BrokerTestCase {
         QueueingConsumer.Delivery secondDelivery = consumer.nextDelivery(5000);
         assertNotNull(secondDelivery, "timed out waiting for redelivered message");
         assertTrue(Arrays.equals(body, delivery.getBody()), "consumed (redelivered) message body not as sent");
+
+        // 主动去获取的时候，消息已被重新投递到同一个消费者上，所以获取不到了
+        assertNull(channel.basicGet(queue, false), "should be no message available");
+    }
+
+
+    @Test
+    public void noRedeliveryWithAutoAck() throws IOException, InterruptedException {
+        verifyNoRedeliveryWithAutoAck(recoverSync);
     }
 
     void verifyNoRedeliveryWithAutoAck(RecoverCallback call) throws IOException, InterruptedException {
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<byte[]> bodyReference = new AtomicReference<byte[]>();
+        HashMap<String, Integer> consumerTimes = new HashMap<>();
         Consumer consumer = new DefaultConsumer(channel) {
             @Override
             public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
                 bodyReference.set(body);
                 latch.countDown();
+                String message = new String(body);
+                Integer count = consumerTimes.get(message);
+                if (count == null) {
+                    consumerTimes.put(consumerTag, 1);
+                    count = 1;
+                }
+                System.out.println("消费者tag=" + consumerTag + ", 消息="+message+", 被消费了【" + count + "】次"); // 理论上会消费两次
+                consumerTimes.put(message, ++count);
             }
         };
-        /**
-         * 收到消息后，会调用consumer的handleDelivery方法，handleDelivery方法会将消息的body赋值给bodyReference，
-         * 然后调用latch.countDown()方法，将latch计数器减1，这样就可以保证在handleDelivery方法执行完后，latch计数器的值为0。
-         * 同时自动回复ack，告诉服务端消费成功
-         */
-        channel.basicConsume(queue, false, consumer); // auto ack.
+        // 结果会消费2次
+//        channel.basicConsume(queue, false, consumer);
+        // 结果会消费1次
+        channel.basicConsume(queue, true, consumer);
         channel.basicPublish("", queue, new AMQP.BasicProperties.Builder().build(), body);
         assertTrue(latch.await(5, TimeUnit.SECONDS));
         assertTrue(Arrays.equals(body, bodyReference.get()), "consumed message body not as sent");
         // Don't ack it, and get it redelivered to the same consumer 作用是重新发送未被确认的消息到消费者
         call.recover(channel);
-        // 主动获取发现没有消息，所以返回null
-        assertNotNull(channel.basicGet(queue, true), "should be no message available");
+        // 主动去获取的时候，消息已被重新投递到同一个消费者上，所以获取不到了
+        assertNull(channel.basicGet(queue, false), "should be no message available");
     }
 
     final RecoverCallback recoverSync = new RecoverCallback() {
@@ -104,24 +134,11 @@ public class Recover extends BrokerTestCase {
 
     final RecoverCallback recoverSyncConvenience = new RecoverCallback() {
         public void recover(Channel channel) throws IOException {
+            // 最终都是调用basicRecover(true)
             channel.basicRecover();
         }
     };
 
-    @Test
-    public void redeliveryOnRecover() throws IOException, InterruptedException {
-        verifyRedeliverOnRecover(recoverSync);
-    }
-
-    @Test
-    public void redeliverOnRecoverConvenience() throws IOException, InterruptedException {
-        verifyRedeliverOnRecover(recoverSyncConvenience);
-    }
-
-    @Test
-    public void noRedeliveryWithAutoAck() throws IOException, InterruptedException {
-        verifyNoRedeliveryWithAutoAck(recoverSync);
-    }
 
     @Test
     public void requeueFalseNotSupported() throws Exception {

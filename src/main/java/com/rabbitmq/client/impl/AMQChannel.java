@@ -495,7 +495,7 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
     }
 
     // 指令发送给服务端
-    public void quiescingTransmit(AMQCommand c) throws IOException {
+    public void quiescingTransmit(AMQCommand c) throws IOException { // {#method<basic.ack>(delivery-tag=5, multiple=true), null, ""}
         _channelLock.lock();
         try {
             if (c.getMethod().hasContent()) { // 如果当前要传输的指令有内容，需要加锁等待其他的发送完成

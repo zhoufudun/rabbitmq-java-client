@@ -125,8 +125,8 @@ public class BrokerTestCase {
     protected void restart()
             throws IOException, TimeoutException {
         tearDown(this.testInfo);
-        bareRestart();
-        setUp(this.testInfo);
+        bareRestart(); // 关闭一个rabbitmq进程，然后再启动一个rabbitmq进程。理论上持久化的消息不会丢失。
+        setUp(this.testInfo); // 开启连接
     }
 
     protected void bareRestart()

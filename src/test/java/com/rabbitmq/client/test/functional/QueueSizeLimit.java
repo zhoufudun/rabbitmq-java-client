@@ -33,39 +33,45 @@ import com.rabbitmq.client.test.BrokerTestCase;
 
 /**
  * Test queue max length limit.
+ *
+ * read
  */
 public class QueueSizeLimit extends BrokerTestCase {
 
     private final int MAXMAXLENGTH = 3;
     private final String q = "queue-maxlength";
 
-    @Test public void queueSize()  throws IOException, InterruptedException {
-        for (int maxLen = 0; maxLen <= MAXMAXLENGTH; maxLen ++){
+    @Test
+    public void queueSize() throws IOException, InterruptedException {
+        for (int maxLen = 0; maxLen <= MAXMAXLENGTH; maxLen++) {
             setupNonDlxTest(maxLen, false);
             assertHead(maxLen, "msg2", q);
             deleteQueue(q);
         }
     }
 
-    @Test public void queueSizeUnacked()  throws IOException, InterruptedException {
-        for (int maxLen = 0; maxLen <= MAXMAXLENGTH; maxLen ++){
+    @Test
+    public void queueSizeUnacked() throws IOException, InterruptedException {
+        for (int maxLen = 0; maxLen <= MAXMAXLENGTH; maxLen++) {
             setupNonDlxTest(maxLen, true);
             assertHead(maxLen > 0 ? 1 : 0, "msg" + (maxLen + 1), q);
             deleteQueue(q);
         }
     }
 
-    @Test public void queueSizeDlx()  throws IOException, InterruptedException {
-        for (int maxLen = 0; maxLen <= MAXMAXLENGTH; maxLen ++){
+    @Test
+    public void queueSizeDlx() throws IOException, InterruptedException {
+        for (int maxLen = 0; maxLen <= MAXMAXLENGTH; maxLen++) {
             setupDlxTest(maxLen, false);
-            assertHead(1, "msg1", "DLQ");
+            assertHead(1, "msg1", "DLQ"); // 从死信队列中获取消息
             deleteQueue(q);
             deleteQueue("DLQ");
         }
     }
 
-    @Test public void queueSizeUnackedDlx()  throws IOException, InterruptedException {
-        for (int maxLen = 0; maxLen <= MAXMAXLENGTH; maxLen ++){
+    @Test
+    public void queueSizeUnackedDlx() throws IOException, InterruptedException {
+        for (int maxLen = 0; maxLen <= MAXMAXLENGTH; maxLen++) {
             setupDlxTest(maxLen, true);
             assertHead(maxLen > 0 ? 0 : 1, "msg1", "DLQ");
             deleteQueue(q);
@@ -73,8 +79,9 @@ public class QueueSizeLimit extends BrokerTestCase {
         }
     }
 
-    @Test public void requeue() throws IOException, InterruptedException  {
-        for (int maxLen = 1; maxLen <= MAXMAXLENGTH; maxLen ++) {
+    @Test
+    public void requeue() throws IOException, InterruptedException {
+        for (int maxLen = 1; maxLen <= MAXMAXLENGTH; maxLen++) {
             declareQueue(maxLen, false);
             setupRequeueTest(maxLen);
             assertHead(maxLen, "msg1", q);
@@ -82,8 +89,9 @@ public class QueueSizeLimit extends BrokerTestCase {
         }
     }
 
-    @Test public void requeueWithDlx() throws IOException, InterruptedException  {
-        for (int maxLen = 1; maxLen <= MAXMAXLENGTH; maxLen ++) {
+    @Test
+    public void requeueWithDlx() throws IOException, InterruptedException {
+        for (int maxLen = 1; maxLen <= MAXMAXLENGTH; maxLen++) {
             declareQueue(maxLen, true);
             setupRequeueTest(maxLen);
             assertHead(maxLen, "msg1", q);
@@ -101,13 +109,14 @@ public class QueueSizeLimit extends BrokerTestCase {
     }
 
     private void setupDlxTest(int maxLen, boolean unAcked) throws IOException, InterruptedException {
-        declareQueue(maxLen, true);
+        declareQueue(maxLen, true); // 设置死信队列
         fill(maxLen);
         if (unAcked) getUnacked(maxLen);
         publish("msg" + (maxLen + 1));
         try {
             Thread.sleep(100);
-        } catch (InterruptedException _e) { }
+        } catch (InterruptedException _e) {
+        }
     }
 
     private void setupRequeueTest(int maxLen) throws IOException, InterruptedException {
@@ -127,11 +136,13 @@ public class QueueSizeLimit extends BrokerTestCase {
             channel.queueDeclare("DLQ", false, true, false, null);
             channel.queueBind("DLQ", "amq.fanout", "");
         }
+        // 如果队列已满，那么最旧的消息会被移动到死信队列（DLQ）。这是因为RabbitMQ遵循先进先出（FIFO）的原则，即先进入队列的消息会先被处理
+        // 声明一个队列，设置队列的最大长度为maxLen，超过队列长度的消息将被丢弃到或者如果过设置了【x-dead-letter-exchange】，超过长度则会被丢弃到死信队列
         channel.queueDeclare(q, false, true, true, args);
     }
 
     private void fill(int count) throws IOException, InterruptedException {
-        for (int i=1; i <= count; i++){
+        for (int i = 1; i <= count; i++) {
             publish("msg" + i);
         }
     }
@@ -141,19 +152,26 @@ public class QueueSizeLimit extends BrokerTestCase {
     }
 
     private void assertHead(int expectedLength, String expectedHeadPayload, String queueName) throws IOException {
-        GetResponse head = channel.basicGet(queueName, true);
+        GetResponse head = channel.basicGet(queueName, true); // 获取后自动回复ack
         if (expectedLength > 0) {
             assertNotNull(head);
             assertEquals(expectedHeadPayload, new String(head.getBody()));
-            assertEquals(expectedLength, head.getMessageCount() + 1);
+            assertEquals(expectedLength, head.getMessageCount() + 1); // 队列中剩余的数量和期望数量一致
         } else {
             assertNull(head);
         }
     }
 
+    /**
+     * 获取指定个数的消息，并且不回复ack
+     *
+     * @param howMany
+     * @return
+     * @throws IOException
+     */
     private List<Long> getUnacked(int howMany) throws IOException {
         List<Long> tags = new ArrayList<Long>(howMany);
-        for (;howMany > 0; howMany --) {
+        for (; howMany > 0; howMany--) {
             GetResponse response = channel.basicGet(q, false);
             tags.add(response.getEnvelope().getDeliveryTag());
         }

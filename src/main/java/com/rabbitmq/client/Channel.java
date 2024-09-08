@@ -761,6 +761,9 @@ public interface Channel extends ShutdownNotifier, AutoCloseable {
      * including the supplied delivery tag; false to acknowledge just
      * the supplied delivery tag.
      * @throws java.io.IOException if an error is encountered
+     *
+     * multiple 参数决定了是确认当前消息还是确认当前消息及之前的所有未确认消息。如果 multiple 为 true，
+     * 则表示确认所有直到并包括 deliveryTag 指定的消息；如果 multiple 为 false，则仅确认 deliveryTag 指定的消息
      */
     void basicAck(long deliveryTag, boolean multiple) throws IOException;
 

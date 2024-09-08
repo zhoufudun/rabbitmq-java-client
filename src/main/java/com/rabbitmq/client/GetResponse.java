@@ -84,6 +84,8 @@ public class GetResponse {
      *
      * @return an estimate of the number of messages remaining to be
      * read from the queue
+     *
+     * 队列中剩余消息数
      */
     public int getMessageCount() {
         return messageCount;
