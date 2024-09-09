@@ -33,13 +33,12 @@ import com.rabbitmq.client.ReturnListener;
 import com.rabbitmq.client.test.BrokerTestCase;
 import org.junit.jupiter.api.TestInfo;
 
-public class AlternateExchange extends BrokerTestCase
-{
+public class AlternateExchange extends BrokerTestCase {
 
-    static private final String[] resources = new String[]{"x","u","v"};
-    static private final String[] keys      = new String[]{"x","u","v","z"};
+    static private final String[] resources = new String[]{"x", "u", "v"};
+    static private final String[] keys = new String[]{"x", "u", "v", "z"};
 
-    static private final boolean[] unrouted = new boolean[] {false, false, false};
+    static private final boolean[] unrouted = new boolean[]{false, false, false};
 
     private final AtomicBoolean gotReturn = new AtomicBoolean();
 
@@ -50,8 +49,8 @@ public class AlternateExchange extends BrokerTestCase
      *
      * @param key the routing key of the message
      * @return an array of booleans that when zipped with {@link
-     *         #resources} indicates whether the messages is expected to be
-     *         routed to the respective queue
+     * #resources} indicates whether the messages is expected to be
+     * routed to the respective queue
      */
     private static boolean[] expected(String key) {
         boolean[] expected = new boolean[resources.length];
@@ -62,28 +61,31 @@ public class AlternateExchange extends BrokerTestCase
     }
 
     @BeforeEach
-    @Override public void setUp(TestInfo info) throws IOException, TimeoutException {
+    @Override
+    public void setUp(TestInfo info) throws IOException, TimeoutException {
         super.setUp(info);
         channel.addReturnListener(new ReturnListener() {
-                public void handleReturn(int replyCode,
-                                         String replyText,
-                                         String exchange,
-                                         String routingKey,
-                                         AMQP.BasicProperties properties,
-                                         byte[] body)
+            public void handleReturn(int replyCode,
+                                     String replyText,
+                                     String exchange,
+                                     String routingKey,
+                                     AMQP.BasicProperties properties,
+                                     byte[] body)
                     throws IOException {
-                    gotReturn.set(true);
-                }
-            });
+                gotReturn.set(true);
+            }
+        });
     }
 
-    @Override protected void createResources() throws IOException {
+    @Override
+    protected void createResources() throws IOException {
         for (String q : resources) {
-          channel.queueDeclare(q, false, false, false, null);
+            channel.queueDeclare(q, false, false, false, null);
         }
     }
 
-    @Override protected void releaseResources() throws IOException {
+    @Override
+    protected void releaseResources() throws IOException {
         for (String r : resources) {
             channel.queueDelete(r);
             // declared by setupRouting
@@ -98,8 +100,8 @@ public class AlternateExchange extends BrokerTestCase
      * <code>name</code>.
      *
      * @param name the name of the exchange to be created, and queue
-     *        to be bound
-     * @param ae the name of the alternate-exchange
+     *             to be bound
+     * @param ae   the name of the alternate-exchange
      */
     protected void setupRouting(String name, String ae) throws IOException {
         Map<String, Object> args = new HashMap<String, Object>();
@@ -127,8 +129,8 @@ public class AlternateExchange extends BrokerTestCase
      * retrieved when expected.
      *
      * @param expected an array of booleans that is zipped with {@link
-     *        #resources} and indicates whether a messages is expected
-     *        to be retrievable from the respective queue
+     *                 #resources} and indicates whether a messages is expected
+     *                 to be retrievable from the respective queue
      */
     protected void checkGet(boolean[] expected) throws IOException {
         for (int i = 0; i < resources.length; i++) {
@@ -140,39 +142,38 @@ public class AlternateExchange extends BrokerTestCase
 
     /**
      * Test whether a message is routed as expected.
-     *
+     * <p>
      * We publish a message to exchange 'x' with a routing key of
      * <code>key</code>, check whether the message (actually, any
      * message) can be retrieved from the queues named in {@link
      * #resources} when expected, and whether a 'basic.return' is
      * received when expected.
      *
-     * @param key the routing key of the message to be sent
+     * @param key       the routing key of the message to be sent
      * @param mandatory whether the message should be marked as 'mandatory'
-     * @param expected indicates which queues we expect the message to
-     *        get routed to
-     * @param ret whether a 'basic.return' is expected
-     *
+     * @param expected  indicates which queues we expect the message to
+     *                  get routed to
+     * @param ret       whether a 'basic.return' is expected
      * @see #checkGet(boolean[])
      */
     protected void check(String key, boolean mandatory, boolean[] expected,
                          boolean ret)
-        throws IOException {
+            throws IOException {
 
         gotReturn.set(false);
         channel.basicPublish("x", key, mandatory, false, null,
-                             "ae-test".getBytes());
+                "ae-test".getBytes());
         checkGet(expected);
         assertEquals(ret, gotReturn.get());
     }
 
     protected void check(String key, boolean[] expected, boolean ret)
-        throws IOException {
+            throws IOException {
         check(key, false, expected, ret);
     }
 
     protected void check(String key, boolean mandatory, boolean ret)
-        throws IOException {
+            throws IOException {
         check(key, mandatory, expected(key), ret);
     }
 
@@ -184,7 +185,8 @@ public class AlternateExchange extends BrokerTestCase
      * check various cases of missing AEs - we expect to see some
      * warnings in the server logs
      */
-    @Test public void missing() throws IOException {
+    @Test
+    public void missing() throws IOException {
         setupRouting("x", "u");
         check("x", false);           //no warning
         check("u", unrouted, false); //warning
@@ -200,7 +202,8 @@ public class AlternateExchange extends BrokerTestCase
         cleanup();
     }
 
-    @Test public void ae() throws IOException {
+    @Test
+    public void ae() throws IOException {
         setupRouting();
 
         for (String k : keys) {
@@ -213,7 +216,8 @@ public class AlternateExchange extends BrokerTestCase
         cleanup();
     }
 
-    @Test public void cycleBreaking() throws IOException {
+    @Test
+    public void cycleBreaking() throws IOException {
         setupRouting();
         check("z", false);
         cleanup();

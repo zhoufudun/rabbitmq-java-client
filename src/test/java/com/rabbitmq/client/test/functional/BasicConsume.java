@@ -14,11 +14,12 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- *
+ * read
  */
 public class BasicConsume extends BrokerTestCase {
 
-    @Test public void basicConsumeOk() throws IOException, InterruptedException {
+    @Test
+    public void basicConsumeOk() throws IOException, InterruptedException {
         String q = channel.queueDeclare().getQueue();
         basicPublishPersistent("msg".getBytes("UTF-8"), q);
         basicPublishPersistent("msg".getBytes("UTF-8"), q);

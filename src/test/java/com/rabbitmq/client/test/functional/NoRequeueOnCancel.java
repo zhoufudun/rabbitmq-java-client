@@ -29,21 +29,23 @@ import org.junit.jupiter.api.Test;
 
 import com.rabbitmq.client.test.BrokerTestCase;
 
-public class NoRequeueOnCancel extends BrokerTestCase
-{
+/**
+ * READ
+ */
+public class NoRequeueOnCancel extends BrokerTestCase {
     protected final String Q = "NoRequeueOnCancel";
 
     protected void createResources() throws IOException {
-      channel.queueDeclare(Q, false, false, false, null);
+        channel.queueDeclare(Q, false, false, false, null);
     }
 
     protected void releaseResources() throws IOException {
         channel.queueDelete(Q);
     }
 
-    @Test public void noRequeueOnCancel()
-        throws IOException, InterruptedException
-    {
+    @Test
+    public void noRequeueOnCancel()
+            throws IOException, InterruptedException {
         channel.basicPublish("", Q, null, "1".getBytes());
 
         final CountDownLatch latch = new CountDownLatch(1);
@@ -56,13 +58,13 @@ public class NoRequeueOnCancel extends BrokerTestCase
         String consumerTag = channel.basicConsume(Q, false, c);
         assertTrue(latch.await(5, TimeUnit.SECONDS));
 
-        channel.basicCancel(consumerTag);
+        channel.basicCancel(consumerTag); // cancel the consumer， no requeue
 
-        assertNull(channel.basicGet(Q, true));
+        assertNull(channel.basicGet(Q, true)); // no requeue，no message
 
         closeChannel();
         openChannel();
 
-        assertNotNull(channel.basicGet(Q, true));
+        assertNotNull(channel.basicGet(Q, true)); // requeue，has message
     }
 }

@@ -1269,6 +1269,9 @@ public interface Channel extends ShutdownNotifier, AutoCloseable {
      * @see com.rabbitmq.client.AMQP.Tx.SelectOk
      * @return a transaction-selection method to indicate the transaction was successfully initiated
      * @throws java.io.IOException if an error is encountered
+     *
+     * Tx.SelectOk txSelect()：这个方法用于在当前信道（Channel）上启用事务模式。在RabbitMQ中，
+     * 事务模式允许你将多个消息发布操作组合成一个事务，要么全部成功提交，要么全部回滚。这提供了一种确保消息传递可靠性的机制
      */
     Tx.SelectOk txSelect() throws IOException;
 

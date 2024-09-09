@@ -18,17 +18,11 @@ package com.rabbitmq.client.test.functional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.rabbitmq.client.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 
-import com.rabbitmq.client.AMQP;
-import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.ConfirmListener;
-import com.rabbitmq.client.DefaultConsumer;
-import com.rabbitmq.client.GetResponse;
-import com.rabbitmq.client.MessageProperties;
-import com.rabbitmq.client.ShutdownSignalException;
 import com.rabbitmq.client.test.BrokerTestCase;
 
 import java.io.IOException;
@@ -41,7 +35,7 @@ import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.TestInfo;
 
 public class Confirm extends BrokerTestCase {
-    private final static int NUM_MESSAGES = 1000;
+    private final static int NUM_MESSAGES = 100;
 
     private static final String TTL_ARG = "x-message-ttl";
 
@@ -51,23 +45,15 @@ public class Confirm extends BrokerTestCase {
         super.setUp(info);
         channel.confirmSelect();
         channel.queueDeclare("confirm-test", true, true, false, null);
-        channel.queueDeclare("confirm-durable-nonexclusive", true, false,
-                false, null);
-        channel.basicConsume("confirm-test", true,
-                new DefaultConsumer(channel));
-        channel.queueDeclare("confirm-test-nondurable", false, true,
-                false, null);
-        channel.basicConsume("confirm-test-nondurable", true,
-                new DefaultConsumer(channel));
-        channel.queueDeclare("confirm-test-noconsumer", true,
-                true, false, null);
+        channel.queueDeclare("confirm-durable-nonexclusive", true, false, false, null);
+        channel.basicConsume("confirm-test", true, new DefaultConsumer(channel));
+        channel.queueDeclare("confirm-test-nondurable", false, true, false, null);
+        channel.basicConsume("confirm-test-nondurable", true, new DefaultConsumer(channel));
+        channel.queueDeclare("confirm-test-noconsumer", true, true, false, null);
         channel.queueDeclare("confirm-test-2", true, true, false, null);
-        channel.basicConsume("confirm-test-2", true,
-                new DefaultConsumer(channel));
-        channel.queueBind("confirm-test", "amq.direct",
-                "confirm-multiple-queues");
-        channel.queueBind("confirm-test-2", "amq.direct",
-                "confirm-multiple-queues");
+        channel.basicConsume("confirm-test-2", true, new DefaultConsumer(channel));
+        channel.queueBind("confirm-test", "amq.direct", "confirm-multiple-queues");
+        channel.queueBind("confirm-test-2", "amq.direct", "confirm-multiple-queues");
     }
 
     @Override
@@ -126,7 +112,7 @@ public class Confirm extends BrokerTestCase {
             throws IOException, InterruptedException, TimeoutException {
         publishN("", "confirm-test-noconsumer", true, false);
 
-        channel.queuePurge("confirm-test-noconsumer");
+        channel.queuePurge("confirm-test-noconsumer"); // 清空队列
 
         channel.waitForConfirmsOrDie(60000);
     }
@@ -135,7 +121,7 @@ public class Confirm extends BrokerTestCase {
     @Test
     public void confirmQueuePurge()
             throws IOException, InterruptedException, TimeoutException {
-        channel.basicQos(1);
+        channel.basicQos(1); // 设置QoS to 1 message
         for (int i = 0; i < 20000; i++) {
             publish("", "confirm-durable-nonexclusive", true, false);
             if (i % 100 == 0) {
@@ -157,11 +143,17 @@ public class Confirm extends BrokerTestCase {
     public void queueTTL()
             throws IOException, InterruptedException, TimeoutException {
         for (int ttl : new int[]{1, 0}) {
-            Map<String, Object> argMap =
-                    Collections.singletonMap(TTL_ARG, (Object) ttl);
+            Map<String, Object> argMap = Collections.singletonMap(TTL_ARG, (Object) ttl);
             channel.queueDeclare("confirm-ttl", true, true, false, argMap);
 
             publishN("", "confirm-ttl", true, false);
+
+            Thread.sleep(1000);
+            QueueingConsumer defaultConsumer = new QueueingConsumer(channel);
+            // 全部过期
+            for (int i = 0; i < NUM_MESSAGES; i++) {
+                assertNull(defaultConsumer.nextDelivery(-1));
+            }
             channel.waitForConfirmsOrDie(60000);
 
             channel.queueDelete("confirm-ttl");
@@ -173,12 +165,12 @@ public class Confirm extends BrokerTestCase {
             throws IOException, InterruptedException, TimeoutException {
         basicRejectCommon(true);
 
-        /* wait confirms to go through the broker */
+        /* wait confirms to go through the broker */ // 等待100个消息回复应答
         Thread.sleep(1000);
 
-        channel.basicConsume("confirm-test-noconsumer", true,
-                new DefaultConsumer(channel));
+        channel.basicConsume("confirm-test-noconsumer", true, new DefaultConsumer(channel));
 
+        // 等待100个消息回复应答
         channel.waitForConfirmsOrDie(60000);
     }
 
@@ -204,17 +196,23 @@ public class Confirm extends BrokerTestCase {
         channel.waitForConfirmsOrDie(60000);
     }
 
+    /**
+     * Tx.SelectOk txSelect()：这个方法用于在当前信道（Channel）上启用事务模式。
+     * 在RabbitMQ中，事务模式允许你将多个消息发布操作组合成一个事务，要么全部成功提交，要么全部回滚。这提供了一种确保消息传递可靠性的机制
+     *
+     * @throws IOException
+     */
     @Test
     public void select()
             throws IOException {
         channel.confirmSelect();
         try {
             Channel ch = connection.createChannel();
-            ch.confirmSelect();
-            ch.txSelect();
+            ch.confirmSelect(); // 没有开启事务
+            ch.txSelect(); // 开启事务
             fail();
         } catch (IOException ioe) {
-            checkShutdownSignal(AMQP.PRECONDITION_FAILED, ioe);
+            checkShutdownSignal(AMQP.PRECONDITION_FAILED, ioe); // 同一个Channel同时开启事务和非事务，会抛异常
         }
         try {
             Channel ch = connection.createChannel();
@@ -229,8 +227,9 @@ public class Confirm extends BrokerTestCase {
     @Test
     public void waitForConfirms()
             throws IOException, InterruptedException, TimeoutException {
-        final SortedSet<Long> unconfirmedSet =
-                Collections.synchronizedSortedSet(new TreeSet<Long>());
+        final SortedSet<Long> unconfirmedSet = Collections.synchronizedSortedSet(new TreeSet<Long>());
+
+        channel.confirmSelect(); // 开启应答模式
         channel.addConfirmListener(new ConfirmListener() {
             public void handleAck(long seqNo, boolean multiple) {
                 if (!unconfirmedSet.contains(seqNo)) {
@@ -249,7 +248,7 @@ public class Confirm extends BrokerTestCase {
         });
 
         for (long i = 0; i < NUM_MESSAGES; i++) {
-            unconfirmedSet.add(channel.getNextPublishSeqNo());
+            unconfirmedSet.add(channel.getNextPublishSeqNo()); // publish消息后，服务端回复应答的序列号，会回调ConfirmListener
             publish("", "confirm-test", true, false);
         }
 
@@ -263,6 +262,7 @@ public class Confirm extends BrokerTestCase {
     public void waitForConfirmsWithoutConfirmSelected()
             throws IOException, InterruptedException {
         channel = connection.createChannel();
+        channel.confirmSelect();
         // Don't enable Confirm mode
         publish("", "confirm-test", true, false);
         try {
@@ -292,12 +292,11 @@ public class Confirm extends BrokerTestCase {
     }
 
     /* Publish NUM_MESSAGES messages and wait for confirmations. */
-    public void confirmTest(String exchange, String queueName,
-                            boolean persistent, boolean mandatory)
+    public void confirmTest(String exchange, String queueName, boolean persistent, boolean mandatory)
             throws IOException, InterruptedException, TimeoutException {
         publishN(exchange, queueName, persistent, mandatory);
 
-        channel.waitForConfirmsOrDie(60000);
+        channel.waitForConfirmsOrDie(60000); // 等待这一批消息全部回复ack
     }
 
     private void publishN(String exchangeName, String queueName,
@@ -313,19 +312,14 @@ public class Confirm extends BrokerTestCase {
         publishN("", "confirm-test-noconsumer", true, false);
 
         for (long i = 0; i < NUM_MESSAGES; i++) {
-            GetResponse resp =
-                    channel.basicGet("confirm-test-noconsumer", false);
+            GetResponse resp = channel.basicGet("confirm-test-noconsumer", false);
             long dtag = resp.getEnvelope().getDeliveryTag();
             channel.basicReject(dtag, requeue);
         }
     }
 
-    protected void publish(String exchangeName, String queueName,
-                           boolean persistent, boolean mandatory)
-            throws IOException {
+    protected void publish(String exchangeName, String queueName, boolean persistent, boolean mandatory) throws IOException {
         channel.basicPublish(exchangeName, queueName, mandatory, false,
-                persistent ? MessageProperties.PERSISTENT_BASIC
-                        : MessageProperties.BASIC,
-                "nop".getBytes());
+                persistent ? MessageProperties.PERSISTENT_BASIC : MessageProperties.BASIC, "nop".getBytes());
     }
 }

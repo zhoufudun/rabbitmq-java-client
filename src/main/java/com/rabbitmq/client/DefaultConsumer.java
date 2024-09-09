@@ -97,6 +97,8 @@ public class DefaultConsumer implements Consumer {
                                byte[] body)
             throws IOException {
         // no work to do
+
+        System.out.println("consumerTag="+consumerTag);
     }
 
     /**

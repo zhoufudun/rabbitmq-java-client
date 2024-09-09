@@ -771,6 +771,8 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
         AMQP.Basic.Publish publish = new Basic.Publish.Builder()
                 .exchange(exchange)
                 .routingKey(routingKey)
+                // 1、如果 mandatory 参数设置为 true，那么当消息无法路由到任何队列时，RabbitMQ 会将消息返回给生产者，并通过 ReturnListener 通知生产者。这通常用于确保消息能够被正确路由到目标队列，如果路由失败，生产者可以采取相应的措施，例如重新发送消息或者记录错误日志。
+                // 2、如果 mandatory 参数设置为 false，那么当消息无法路由到任何队列时，RabbitMQ 会直接丢弃该消息，并且不会通知生产者。
                 .mandatory(mandatory)
                 .immediate(immediate)
                 .build(); // #method<basic.publish>(ticket=0, exchange=, routing-key=f0650b3d-9ac2-4203-af0d-a623212e6127, mandatory=false, immediate=false)
