@@ -30,7 +30,7 @@ public class Heartbeat extends BrokerTestCase {
     @Override
     protected ConnectionFactory newConnectionFactory() {
         ConnectionFactory cf = super.newConnectionFactory();
-        cf.setRequestedHeartbeat(1);
+        cf.setRequestedHeartbeat(1); // 实际上客户端发送心跳的间隔1/2s一次：com.rabbitmq.client.impl.AMQConnection.setHeartbeat
         return cf;
     }
 
@@ -39,9 +39,9 @@ public class Heartbeat extends BrokerTestCase {
         assertEquals(1, connection.getHeartbeat());
         Thread.sleep(3100);
         assertTrue(connection.isOpen());
-        ((AutorecoveringConnection) connection).getDelegate().setHeartbeat(0);
+        ((AutorecoveringConnection) connection).getDelegate().setHeartbeat(0); // 0 表示关闭心跳，会取消心跳任务
         assertEquals(0, connection.getHeartbeat());
-        Thread.sleep(3100);
+        Thread.sleep(3100); // 等待服务端关闭连接
         assertFalse(connection.isOpen());
 
     }

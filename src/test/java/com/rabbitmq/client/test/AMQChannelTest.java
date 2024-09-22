@@ -41,15 +41,18 @@ public class AMQChannelTest {
 
     ScheduledExecutorService scheduler;
 
-    @BeforeEach public void init() {
+    @BeforeEach
+    public void init() {
         scheduler = Executors.newSingleThreadScheduledExecutor();
     }
 
-    @AfterEach public void tearDown() {
+    @AfterEach
+    public void tearDown() {
         scheduler.shutdownNow();
     }
 
-    @Test public void rpcTimesOutWhenResponseDoesNotCome() throws IOException {
+    @Test
+    public void rpcTimesOutWhenResponseDoesNotCome() throws IOException {
         int rpcTimeout = 100;
         AMQConnection connection = mock(AMQConnection.class);
         when(connection.getChannelRpcTimeout()).thenReturn(rpcTimeout);
@@ -57,17 +60,17 @@ public class AMQChannelTest {
 
         DummyAmqChannel channel = new DummyAmqChannel(connection, 1);
         Method method = new AMQImpl.Queue.Declare.Builder()
-            .queue("")
-            .durable(false)
-            .exclusive(true)
-            .autoDelete(true)
-            .arguments(null)
-            .build();
+                .queue("")
+                .durable(false)
+                .exclusive(true)
+                .autoDelete(true)
+                .arguments(null)
+                .build();
 
         try {
             channel.rpc(method);
             fail("Should time out and throw an exception");
-        } catch(ChannelContinuationTimeoutException e) {
+        } catch (ChannelContinuationTimeoutException e) {
             // OK
             assertThat((DummyAmqChannel) e.getChannel()).isEqualTo(channel);
             assertThat(e.getChannelNumber()).isEqualTo(channel.getChannelNumber());
@@ -76,7 +79,8 @@ public class AMQChannelTest {
         }
     }
 
-    @Test public void rpcReturnsResultWhenResponseHasCome() throws IOException {
+    @Test
+    public void rpcReturnsResultWhenResponseHasCome() throws IOException {
         int rpcTimeout = 1000;
         AMQConnection connection = mock(AMQConnection.class);
         when(connection.getChannelRpcTimeout()).thenReturn(rpcTimeout);
@@ -84,17 +88,17 @@ public class AMQChannelTest {
 
         final DummyAmqChannel channel = new DummyAmqChannel(connection, 1);
         Method method = new AMQImpl.Queue.Declare.Builder()
-            .queue("")
-            .durable(false)
-            .exclusive(true)
-            .autoDelete(true)
-            .arguments(null)
-            .build();
+                .queue("")
+                .durable(false)
+                .exclusive(true)
+                .autoDelete(true)
+                .arguments(null)
+                .build();
 
         final Method response = new AMQImpl.Queue.DeclareOk.Builder()
-            .queue("whatever")
-            .consumerCount(0)
-            .messageCount(0).build();
+                .queue("whatever")
+                .consumerCount(0)
+                .messageCount(0).build();
 
         scheduler.schedule(new Callable<Void>() {
             @Override
@@ -118,17 +122,17 @@ public class AMQChannelTest {
 
         final DummyAmqChannel channel = new DummyAmqChannel(connection, 1);
         Method method = new AMQImpl.Queue.Declare.Builder()
-            .queue("123")
-            .durable(false)
-            .exclusive(true)
-            .autoDelete(true)
-            .arguments(null)
-            .build();
+                .queue("123")
+                .durable(false)
+                .exclusive(true)
+                .autoDelete(true)
+                .arguments(null)
+                .build();
 
         try {
             channel.rpc(method);
             fail("Should time out and throw an exception");
-        } catch(final ChannelContinuationTimeoutException e) {
+        } catch (final ChannelContinuationTimeoutException e) {
             // OK
             assertThat((DummyAmqChannel) e.getChannel()).isEqualTo(channel);
             assertThat(e.getChannelNumber()).isEqualTo(channel.getChannelNumber());
@@ -138,18 +142,18 @@ public class AMQChannelTest {
 
         // now do a basic.consume request and have the queue.declareok returned instead
         method = new AMQImpl.Basic.Consume.Builder()
-            .queue("123")
-            .consumerTag("")
-            .arguments(null)
-            .build();
+                .queue("123")
+                .consumerTag("")
+                .arguments(null)
+                .build();
 
         final Method response1 = new AMQImpl.Queue.DeclareOk.Builder()
-            .queue("123")
-            .consumerCount(0)
-            .messageCount(0).build();
+                .queue("123")
+                .consumerCount(0)
+                .messageCount(0).build();
 
         final Method response2 = new AMQImpl.Basic.ConsumeOk.Builder()
-            .consumerTag("456").build();
+                .consumerTag("456").build();
 
         scheduler.schedule((Callable<Void>) () -> {
             channel.handleCompleteInboundCommand(new AMQCommand(response1));

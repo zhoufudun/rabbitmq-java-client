@@ -620,6 +620,13 @@ public interface Channel extends ShutdownNotifier, AutoCloseable {
      * Declare a queue passively; i.e., check if it exists.  In AMQP
      * 0-9-1, all arguments aside from nowait are ignored; and sending
      * nowait makes this method a no-op, so we default it to false.
+     *
+     * 这段英文描述了在AMQP（高级消息队列协议）中被动声明队列的行为。被动声明队列意味着客户端只是检查队列是否存在，而不进行任何创建或修改操作。
+     * 在AMQP 0-9-1版本中，除了nowait参数外，其他参数都会被忽略。如果发送nowait参数，该方法将变为无操作，因此默认情况下将其设置为false。
+     * 以下是对这段描述的中文翻译：
+     * 声明一个队列以被动方式； 即，检查它是否存在。 在 AMQP * 0-9-1 中，除了 nowait 之外的所有参数都被忽略；
+     * 并且发送 * nowait 使此方法成为无操作，因此我们将其默认设置为 false
+     *
      * @see com.rabbitmq.client.AMQP.Queue.Declare
      * @see com.rabbitmq.client.AMQP.Queue.DeclareOk
      * @param queue the name of the queue

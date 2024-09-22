@@ -70,8 +70,7 @@ public class ShutdownNotifierComponent implements ShutdownNotifier {
         ShutdownSignalException sse = null;
         ShutdownListener[] sdls = null;
         synchronized (this.monitor) {
-            sdls = this.shutdownListeners
-                    .toArray(new ShutdownListener[this.shutdownListeners.size()]);
+            sdls = this.shutdownListeners.toArray(new ShutdownListener[this.shutdownListeners.size()]);
             sse = this.shutdownCause;
         }
         for (ShutdownListener l : sdls) {

@@ -28,18 +28,23 @@ import com.rabbitmq.client.test.BrokerTestCase;
 import com.rabbitmq.client.test.functional.DeadLetterExchange;
 import com.rabbitmq.tools.Host;
 
+/**
+ * read
+ */
 public class DeadLetterExchangeDurable extends BrokerTestCase {
     @Override
     protected void createResources() throws IOException {
         Map<String, Object> args = new HashMap<String, Object>();
-        args.put("x-message-ttl", 5000);
+        args.put("x-message-ttl", 5000); // 队列的消息5s没有被消费，就会被发送到死信交换机，死信交换机会将消息根据路由key路由到响应的队列中
         args.put("x-dead-letter-exchange", DeadLetterExchange.DLX);
 
         channel.exchangeDeclare(DeadLetterExchange.DLX, "direct", true);
         channel.queueDeclare(DeadLetterExchange.DLQ, true, false, false, null);
-        channel.queueDeclare(DeadLetterExchange.TEST_QUEUE_NAME, true, false, false, args);
-        channel.queueBind(DeadLetterExchange.TEST_QUEUE_NAME, "amq.direct", "test");
         channel.queueBind(DeadLetterExchange.DLQ, DeadLetterExchange.DLX, "test");
+
+        channel.queueDeclare(DeadLetterExchange.TEST_QUEUE_NAME, true, false, false, args);
+
+        channel.queueBind(DeadLetterExchange.TEST_QUEUE_NAME, "amq.direct", "test");
     }
 
     @Override
@@ -49,12 +54,13 @@ public class DeadLetterExchangeDurable extends BrokerTestCase {
         channel.queueDelete(DeadLetterExchange.TEST_QUEUE_NAME);
     }
 
-    @Test public void deadLetterQueueTTLExpiredWhileDown() throws Exception {
-        for(int x = 0; x < DeadLetterExchange.MSG_COUNT; x++) {
+    @Test
+    public void deadLetterQueueTTLExpiredWhileDown() throws Exception {
+        for (int x = 0; x < DeadLetterExchange.MSG_COUNT; x++) {
             channel.basicPublish("amq.direct", "test", MessageProperties.MINIMAL_PERSISTENT_BASIC, "test message".getBytes());
         }
 
-        closeConnection();
+        closeConnection(); 
         Host.stopRabbitOnNode();
         Thread.sleep(5000);
         Host.startRabbitOnNode();

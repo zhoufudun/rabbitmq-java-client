@@ -139,7 +139,7 @@ public class ConnectionFactory implements Cloneable {
     private int port = USE_DEFAULT_PORT;
     private int requestedChannelMax = DEFAULT_CHANNEL_MAX;
     private int requestedFrameMax = DEFAULT_FRAME_MAX;
-    private int requestedHeartbeat = DEFAULT_HEARTBEAT;
+    private int requestedHeartbeat = DEFAULT_HEARTBEAT; // 客户端发送心跳的间隔
     private int connectionTimeout = DEFAULT_CONNECTION_TIMEOUT;
     private int handshakeTimeout = DEFAULT_HANDSHAKE_TIMEOUT;
     private int shutdownTimeout = DEFAULT_SHUTDOWN_TIMEOUT;
@@ -659,6 +659,8 @@ public class ConnectionFactory implements Cloneable {
      * to lower the value; otherwise any value provided by the client will be used.
      * <p>
      * Note the value must be between 0 and 65535 (unsigned short in AMQP 0-9-1).
+     *
+     * 设置与RabbitMQ服务器连接时的心跳超时时间
      *
      * @param requestedHeartbeat the initially requested heartbeat timeout, in seconds; zero for none
      * @see <a href="https://rabbitmq.com/heartbeats.html">RabbitMQ Heartbeats Guide</a>
@@ -1325,7 +1327,7 @@ public class ConnectionFactory implements Cloneable {
             this.metricsCollector = new NoOpMetricsCollector();
         }
         // make sure we respect the provided thread factory
-        FrameHandlerFactory fhFactory = createFrameHandlerFactory();
+        FrameHandlerFactory fhFactory = createFrameHandlerFactory(); // SocketFrameHandlerFactory
         ConnectionParams params = params(executor);
         // set client-provided via a client property
         if (clientProvidedName != null) {

@@ -57,7 +57,8 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
      * ensure this is the case - see the use of
      * BlockingRpcContinuation to inject code into the reader thread
      * in basicConsume and basicCancel. “从消费者标签到消费者实例的映射“。请注意，一般情况下，这个映射只能从连接的读取线程中访问。我们为确保这一点做了一些努力——请参阅在 basicConsume 和 basicCancel 中使用 BlockingRpcContinuation 将代码注入读取线程的方式。”
-     * key=consumerTag（可一个channel都有一个tag）， value=客户端的消费实例（封装具体的消费逻辑）
+     * key=consumerTag（每一个channel都有一个tag）， value=客户端的消费实例（封装具体的消费逻辑）
+     * 一个channel上可以有多个消费者
      */
     private final Map<String, Consumer> _consumers = Collections.synchronizedMap(new HashMap<String, Consumer>());
 
@@ -86,7 +87,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
      * 为此通道分配消费者任务的调度器。 每一个消费者拥有一个ConsumerDispatcher
      * Dispatcher of consumer work for this channel
      */
-    private final ConsumerDispatcher dispatcher;
+    private final ConsumerDispatcher dispatcher; // 为每个channel分配消费者任务的调度器
 
     /**
      * Future boolean for shutting down
@@ -1511,9 +1512,9 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
         BlockingRpcContinuation<String> k = new BlockingRpcContinuation<String>(m) {
             @Override
             public String transformReply(AMQCommand replyCommand) {
-                String actualConsumerTag = ((Basic.ConsumeOk) replyCommand.getMethod()).getConsumerTag();
+                String actualConsumerTag = ((Basic.ConsumeOk) replyCommand.getMethod()).getConsumerTag(); // 消费者唯一标识：amq.ctag-vvMF3qPRlhaU-jea_mHDEw
                 Consumer wrappedCallback = observationCollector.basicConsume(queue, consumerTag, callback);
-                _consumers.put(actualConsumerTag, wrappedCallback);
+                _consumers.put(actualConsumerTag, wrappedCallback); // 保存消费者唯一标识和消费者的包装类（消费逻辑）
 
                 // need to register consumer in stats before it actually starts consuming
                 metricsCollector.basicConsume(ChannelN.this, actualConsumerTag, autoAck);

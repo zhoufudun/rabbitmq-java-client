@@ -162,7 +162,7 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
     /**
      * Placeholder until we address bug 15786 (implementing a proper exception hierarchy).
      */
-    public AMQCommand exnWrappingRpc(Method m)
+    public AMQCommand exnWrappingRpc(Method m) // m=#method<connection.open>(virtual-host=/zfdtest, capabilities=, insist=false)
             throws IOException {
         try {
             return privateRpc(m);
@@ -453,10 +453,13 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
                 _channelLock.unlock();
             }
         } finally {
-            if (notifyRpc)
+            if (notifyRpc) {
+                // 通知正在等待应答的请求，将ShutdownSignalException信息塞给他们，他们获得异常信号后，就会不继续等待，拿着异常返回去处理了
                 notifyOutstandingRpc(signal);
+            }
         }
     }
+
     // 通知正在等待应答的请求，关闭等待应答
     void notifyOutstandingRpc(ShutdownSignalException signal) {
         RpcWrapper k = nextOutstandingRpc();
@@ -473,6 +476,7 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
             _channelLock.unlock();
         }
     }
+
     // c={#method<basic.publish>(ticket=0, exchange=, routing-key=hello, mandatory=false, immediate=false), #contentHeader<basic>(content-type=null, content-encoding=null, headers=null, delivery-mode=null, priority=null, correlation-id=null, reply-to=null, expiration=null, message-id=null, timestamp=null, type=null, user-id=null, app-id=null, cluster-id=null), "Hello World!"}
     public void transmit(AMQCommand c) throws IOException {
         _channelLock.lock();
@@ -537,7 +541,7 @@ public abstract class AMQChannel extends ShutdownNotifierComponent {
     public static abstract class BlockingRpcContinuation<T> implements RpcContinuation {
         final BlockingValueOrException<T, ShutdownSignalException> _blocker = new BlockingValueOrException<>();
 
-        protected final Method request;
+        protected final Method request; // #method<connection.open>(virtual-host=/zfdtest, capabilities=, insist=false)
 
         BlockingRpcContinuation() {
             request = null;

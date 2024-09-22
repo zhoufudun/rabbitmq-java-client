@@ -46,24 +46,29 @@ import static org.junit.jupiter.api.Assertions.fail;
 public class AMQConnectionTest {
     // private static final String CLOSE_MESSAGE = "terminated by test";
 
-    /** The mock frame handler used to test connection behaviour. */
+    /**
+     * The mock frame handler used to test connection behaviour.
+     */
     private MockFrameHandler _mockFrameHandler;
     private ConnectionFactory factory;
     private MyExceptionHandler exceptionHandler;
 
-    @BeforeEach public void setUp() {
+    @BeforeEach
+    public void setUp() {
         _mockFrameHandler = new MockFrameHandler();
         factory = TestUtils.connectionFactory();
         exceptionHandler = new MyExceptionHandler();
         factory.setExceptionHandler(exceptionHandler);
     }
 
-    @AfterEach public void tearDown() {
+    @AfterEach
+    public void tearDown() {
         factory = null;
         _mockFrameHandler = null;
     }
 
-    @Test public void negativeTCPConnectionTimeout() {
+    @Test
+    public void negativeTCPConnectionTimeout() {
         ConnectionFactory cf = TestUtils.connectionFactory();
         try {
             cf.setConnectionTimeout(-10);
@@ -73,7 +78,8 @@ public class AMQConnectionTest {
         }
     }
 
-    @Test public void negativeProtocolHandshakeTimeout() {
+    @Test
+    public void negativeProtocolHandshakeTimeout() {
         ConnectionFactory cf = TestUtils.connectionFactory();
         try {
             cf.setHandshakeTimeout(-10);
@@ -83,13 +89,15 @@ public class AMQConnectionTest {
         }
     }
 
-    @Test public void tcpConnectionTimeoutGreaterThanHandShakeTimeout() {
+    @Test
+    public void tcpConnectionTimeoutGreaterThanHandShakeTimeout() {
         ConnectionFactory cf = TestUtils.connectionFactory();
         cf.setHandshakeTimeout(3000);
         cf.setConnectionTimeout(5000);
     }
 
-    @Test public void protocolHandshakeTimeoutGreaterThanTCPConnectionTimeout() {
+    @Test
+    public void protocolHandshakeTimeoutGreaterThanTCPConnectionTimeout() {
         ConnectionFactory cf = TestUtils.connectionFactory();
 
         cf.setConnectionTimeout(5000);
@@ -99,7 +107,8 @@ public class AMQConnectionTest {
         cf.setHandshakeTimeout(7000);
     }
 
-    @Test public void negativeRpcTimeoutIsForbidden() {
+    @Test
+    public void negativeRpcTimeoutIsForbidden() {
         ConnectionFactory cf = TestUtils.connectionFactory();
         try {
             cf.setChannelRpcTimeout(-10);
@@ -109,10 +118,12 @@ public class AMQConnectionTest {
         }
     }
 
-    /** Check the AMQConnection does send exactly 1 initial header, and deal correctly with
+    /**
+     * Check the AMQConnection does send exactly 1 initial header, and deal correctly with
      * the frame handler throwing an exception when we try to read data
      */
-    @Test public void connectionSendsSingleHeaderAndTimesOut() throws TimeoutException {
+    @Test
+    public void connectionSendsSingleHeaderAndTimesOut() throws TimeoutException {
         IOException exception = new SocketTimeoutException();
         _mockFrameHandler.setExceptionOnReadingFrames(exception);
         assertEquals(0, _mockFrameHandler.countHeadersSent());
@@ -120,8 +131,8 @@ public class AMQConnectionTest {
             ConnectionParams params = factory.params(Executors.newFixedThreadPool(1));
             new AMQConnection(params, _mockFrameHandler).start();
             fail("Connection should have thrown exception");
-        } catch(IOException signal) {
-           // As expected
+        } catch (IOException signal) {
+            // As expected
         }
         assertEquals(1, _mockFrameHandler.countHeadersSent());
         // _connection.close(0, CLOSE_MESSAGE);
@@ -145,16 +156,17 @@ public class AMQConnectionTest {
     /**
      * Test that we catch timeout between connect and negotiation of the connection being finished.
      */
-    @Test public void connectionHangInNegotiation() {
+    @Test
+    public void connectionHangInNegotiation() {
         this._mockFrameHandler.setTimeoutCount(10); // to limit hang
         assertEquals(0, this._mockFrameHandler.countHeadersSent());
         try {
             ConnectionParams params = factory.params(Executors.newFixedThreadPool(1));
             new AMQConnection(params, this._mockFrameHandler).start();
             fail("Connection should have thrown exception");
-        } catch(IOException signal) {
+        } catch (IOException signal) {
             // expected
-        } catch(TimeoutException te) {
+        } catch (TimeoutException te) {
             // also fine: continuation timed out first
         }
         assertEquals(1, this._mockFrameHandler.countHeadersSent());
@@ -163,7 +175,8 @@ public class AMQConnectionTest {
         assertEquals(SocketTimeoutException.class, exceptionList.get(0).getClass(), "Wrong type of exception returned.");
     }
 
-    @Test public void clientProvidedConnectionName() throws IOException, TimeoutException {
+    @Test
+    public void clientProvidedConnectionName() throws IOException, TimeoutException {
         String providedName = "event consumers connection";
         Connection connection = factory.newConnection(providedName);
         assertEquals(providedName, connection.getClientProvidedName());
@@ -193,19 +206,27 @@ public class AMQConnectionTest {
         connection.close();
     }
 
-    /** Mock frame handler to facilitate testing. */
+    /**
+     * Mock frame handler to facilitate testing.
+     */
     private static class MockFrameHandler implements FrameHandler {
-        /** How many times has sendHeader() been called? */
+        /**
+         * How many times has sendHeader() been called?
+         */
         private int _numHeadersSent;
 
         private int timeout;
 
-        /** An optional exception for us to throw on reading frames */
+        /**
+         * An optional exception for us to throw on reading frames
+         */
         private IOException _exceptionOnReadingFrames;
 
         private int timeoutCount = 0;
 
-        /** count how many headers we've sent
+        /**
+         * count how many headers we've sent
+         *
          * @return the number of sent headers
          */
         public int countHeadersSent() {
@@ -277,7 +298,9 @@ public class AMQConnectionTest {
         }
     }
 
-    /** Exception handler to facilitate testing. */
+    /**
+     * Exception handler to facilitate testing.
+     */
     private class MyExceptionHandler implements ExceptionHandler {
         private final List<Throwable> _handledExceptions = new ArrayList<Throwable>();
 
@@ -305,8 +328,7 @@ public class AMQConnectionTest {
                                             Throwable ex,
                                             Consumer c,
                                             String consumerTag,
-                                            String methodName)
-        {
+                                            String methodName) {
             fail("handleConsumerException " + consumerTag + " " + methodName + ": " + ex);
         }
 

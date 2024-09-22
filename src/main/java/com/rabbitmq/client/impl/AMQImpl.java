@@ -633,7 +633,7 @@ public class AMQImpl implements AMQP {
                     throw new IllegalStateException("Invalid configuration: 'capabilities' must be non-null.");
                 if (virtualHost == null)
                     throw new IllegalStateException("Invalid configuration: 'virtualHost' must be non-null.");
-                this.virtualHost = virtualHost;
+                this.virtualHost = virtualHost; // "/zfdtest"
                 this.capabilities = capabilities;
                 this.insist = insist;
             }
@@ -2852,11 +2852,11 @@ public class AMQImpl implements AMQP {
                     throw new IllegalStateException("Invalid configuration: 'queue' must be non-null.");
                 if (routingKey == null)
                     throw new IllegalStateException("Invalid configuration: 'routingKey' must be non-null.");
-                this.ticket = ticket;
-                this.queue = queue;
-                this.exchange = exchange;
-                this.routingKey = routingKey;
-                this.nowait = nowait;
+                this.ticket = ticket; // 0
+                this.queue = queue; // amq.gen-srPSnh3r4w9YIoYelYEdyg
+                this.exchange = exchange; // direct_logs
+                this.routingKey = routingKey; // 111
+                this.nowait = nowait; // fasle
                 this.arguments = arguments == null ? null : Collections.unmodifiableMap(new HashMap<String, Object>(arguments));
             }
 

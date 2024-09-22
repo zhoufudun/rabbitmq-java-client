@@ -24,12 +24,15 @@ import org.junit.jupiter.api.Test;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Method;
 
+/**
+ * read
+ */
 public class AMQBuilderApiTest extends BrokerTestCase {
     private static final String XCHG_NAME = "builder_test_xchg";
 
     @Test
     public void particularBuilderForBasicSanityWithRpc() throws IOException {
-        Method retVal =
+        Method retVal = // #method<exchange.declare-ok>()
                 channel.rpc(new AMQP.Exchange.Declare.Builder()
                         .exchange(XCHG_NAME)
                         .type("direct")
@@ -40,7 +43,7 @@ public class AMQBuilderApiTest extends BrokerTestCase {
         assertTrue(channel.isOpen(), "Channel should still be open.");
         assertTrue(retVal instanceof AMQP.Exchange.DeclareOk);
 
-        retVal = channel.rpc(new AMQP.Exchange.Delete.Builder()
+        retVal = channel.rpc(new AMQP.Exchange.Delete.Builder() // #method<exchange.delete-ok>()
                 .exchange(XCHG_NAME)
                 .build()
         ).getMethod();

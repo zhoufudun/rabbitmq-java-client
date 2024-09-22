@@ -65,6 +65,9 @@ import java.util.function.BiConsumer;
  *            工作完成后，如果有进一步的工作，它可能会被标记为准备就绪，如果没有，则标记为休眠。
  *            对于一个不活跃的客户来说，从来没有任何工作。客户端可以使用unregisterKey（K）进行注销，
  *            这会将客户端从状态的所有部分以及与之存储的任何项目队列中删除。所有客户端都可以使用unregistrAllKey（）进行注销。
+ *
+ *
+ *           一个客户端连接（AMQConnection）对应一个WorkPool
  */
 public class WorkPool<K, W> {
     private static final int MAX_QUEUE_LENGTH = 1000;
@@ -79,7 +82,7 @@ public class WorkPool<K, W> {
     private final Set<K> inProgress = new HashSet<K>();
     /**
      * The pool of registered clients, with their work queues.
-     */     // 每一个channel（？？）拥有一个队列，同一个AMQConnection上会有多个连接吗？？
+     */     // 每一个channel拥有一个队列，同一个AMQConnection上会有多个channel
     private final Map<K, VariableLinkedBlockingQueue<W>> pool = new HashMap<>();
     /**
      * Those keys which want limits to be removed. We do not limit queue size if this is non-empty.

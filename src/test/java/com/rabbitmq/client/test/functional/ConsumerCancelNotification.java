@@ -35,7 +35,8 @@ public class ConsumerCancelNotification extends BrokerTestCase {
 
     private final String queue = "cancel_notification_queue";
 
-    @Test public void consumerCancellationNotification() throws IOException,
+    @Test
+    public void consumerCancellationNotification() throws IOException,
             InterruptedException {
         final BlockingQueue<Boolean> result = new ArrayBlockingQueue<Boolean>(1);
 
@@ -82,7 +83,8 @@ public class ConsumerCancelNotification extends BrokerTestCase {
         }
     }
 
-    @Test public void consumerCancellationHandlerUsesBlockingOperations()
+    @Test
+    public void consumerCancellationHandlerUsesBlockingOperations()
             throws IOException, InterruptedException {
         final String altQueue = "basic.cancel.fallback";
         channel.queueDeclare(queue, false, true, false, null);

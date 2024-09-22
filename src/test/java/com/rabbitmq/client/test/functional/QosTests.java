@@ -41,6 +41,9 @@ import com.rabbitmq.client.QueueingConsumer;
 import com.rabbitmq.client.QueueingConsumer.Delivery;
 import com.rabbitmq.client.test.BrokerTestCase;
 
+/**
+ * read
+ */
 public class QosTests extends BrokerTestCase {
 
     public void setUp()
@@ -90,7 +93,28 @@ public class QosTests extends BrokerTestCase {
     public void messageLimitPrefetchSizeFails()
             throws IOException {
         try {
+            /**
+             * 尝试设置预取大小为1000，预取窗口大小为0，并且不应用于全局
+             *
+             * 当basicQos方法中的 prefetchSize 参数设置为0时，它表示在一次发送多条消息给消费者之前，没有消息体大小的限制。
+             * 这意味着，即使消费者的缓冲区还没有足够的空间来接收所有预取的消息，消息也会被发送到消费者。
+             * 在实际应用中，prefetchSize 通常与 prefetchCount 一起使用。prefetchCount 指定了在未收到消费者确认之前，
+             * 生产者可以向消费者发送的最大消息数量。而 prefetchSize 则限制了这些消息的总大小（以字节为单位）。
+             * 当 prefetchSize 设置为0时，prefetchCount 成为唯一的限制因素。
+             * 这意味着生产者可以向消费者发送任意数量的消息，只要这些消息的总大小不超过消费者的缓冲区容量
+             *
+             */
             channel.basicQos(1000, 0, false);
+
+            /**
+             * 这里的三个参数分别是：
+             * prefetchSize：设置预取消息的大小限制（以字节为单位）。在这个例子中，设置为1000字节。
+             * prefetchCount：设置预取消息的数量限制。在这个例子中，设置为0，表示没有数量限制。
+             * global：一个布尔值，指示QoS设置是否应用于整个连接（如果为true），或者仅应用于当前通道（如果为false）。
+             * 在这个例子中，设置为false，表示仅应用于当前通道
+             */
+
+            // prefetchSize：设置预取消息的大小限制（以字节为单位）。在这个例子中，服务端不允洗设置，值允许设置0（没有消息体大小的限制）
             fail("basic.qos{pretfetch_size=NonZero} should not be supported");
         } catch (IOException ioe) {
             checkShutdownSignal(AMQP.NOT_IMPLEMENTED, ioe);
@@ -109,8 +133,8 @@ public class QosTests extends BrokerTestCase {
     public void noAckNoAlterLimit()
             throws IOException {
         QueueingConsumer c = new QueueingConsumer(channel);
-        declareBindConsume(channel, c, true);
-        channel.basicQos(1, true);
+        declareBindConsume(channel, c, true); // 服务端投递完消息后，自动ack，无序客户端自己处理
+        channel.basicQos(1, true); // 设置了消息预取限制为1，并且设置了noAck=true，即无需客户端ack
         fill(2);
         drain(c, 2);
     }

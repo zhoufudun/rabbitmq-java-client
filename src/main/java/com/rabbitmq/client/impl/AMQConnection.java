@@ -463,7 +463,7 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
             int frameMax = negotiatedMaxValue(this.requestedFrameMax, connTune.getFrameMax()); // 131072=1024*128b=128kb
             this._frameMax = frameMax; // 131072=1024*128b=128kb
 
-            int negotiatedHeartbeat = negotiatedMaxValue(this.requestedHeartbeat, connTune.getHeartbeat()); // 60s
+            int negotiatedHeartbeat = negotiatedMaxValue(this.requestedHeartbeat, connTune.getHeartbeat()); // 60s，在服务端和客户端的心跳时间，取两者中较小的一个
 
             if (!checkUnsignedShort(negotiatedHeartbeat)) {
                 throw new IllegalArgumentException("Negotiated heartbeat must be between 0 and " + MAX_UNSIGNED_SHORT + ": " + negotiatedHeartbeat);
@@ -1207,7 +1207,7 @@ public class AMQConnection extends ShutdownNotifierComponent implements Connecti
                 };
 
                 _channel0.quiescingRpc(reason, k);
-                k.getReply(timeout);
+                k.getReply(timeout); // 等待服务端关闭消息返回
             } else {
                 _channel0.quiescingTransmit(reason);
             }

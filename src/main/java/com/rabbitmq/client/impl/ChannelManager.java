@@ -113,7 +113,7 @@ public class ChannelManager {
         synchronized(this.monitor) {
             channels = new HashSet<ChannelN>(_channelMap.values());
         }
-
+        //
         for (final ChannelN channel : channels) {
             releaseChannelNumber(channel);
             // async shutdown if possible
@@ -226,7 +226,7 @@ public class ChannelManager {
     /**
      * Remove the channel from the channel map and free the number for re-use.
      * This method must be safe to call multiple times on the same channel. If
-     * it is not then things go badly wrong.
+     * it is not then things go badly wrong. 从频道映射中移除该频道，并释放该频道号以供重新使用。这个方法必须能够安全地在同一个频道上被多次调用。如果不能，那么事情就会变得非常糟糕
      */
     public void releaseChannelNumber(ChannelN channel) {
         // Warning, here be dragons. Not great big ones, but little baby ones
@@ -240,6 +240,10 @@ public class ChannelManager {
         // a way as to cause disconnectChannel on the old channel to try to
         // remove the new one. Ideally we would fix this race at the source,
         // but it's much easier to just catch it here.
+        /**
+         *  如果我们在一个线程中关闭一个 Channel，而在另一个线程中使用相同的频道号打开一个新的 Channel，这两个操作可能会重叠，
+         *  导致旧频道上的 disconnectChannel 尝试删除新频道。理想情况下，我们应该从源头上解决这个竞争问题，但在这里捕获它要容易得多
+         */
         synchronized (this.monitor) {
             int channelNumber = channel.getChannelNumber();
             ChannelN existing = _channelMap.remove(channelNumber);
@@ -247,7 +251,7 @@ public class ChannelManager {
             if (existing == null)
                 return;
             // Oops, we've gone and stomped on someone else's channel. Put it
-            // back and pretend we didn't touch it.
+            // back and pretend we didn't touch it.   哎呀，我们不小心占用了别人的频道。把它放回去，假装我们没有碰过它
             else if (existing != channel) {
                 _channelMap.put(channelNumber, existing);
                 return;

@@ -33,9 +33,7 @@ import static com.rabbitmq.client.test.TestUtils.versionCompare;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class BrokerTestCase {
-
     private String brokerVersion;
-
     protected volatile TestInfo testInfo;
 
     protected ConnectionFactory connectionFactory = newConnectionFactory();

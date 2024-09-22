@@ -38,7 +38,7 @@ public class AutorecoveringChannel implements RecoverableChannel {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AutorecoveringChannel.class);
 
-    private volatile RecoveryAwareChannelN delegate; //AMQChannel(amqp://guest@127.0.0.1:5672//zfdtest,1)
+    private volatile RecoveryAwareChannelN delegate; //RecoveryAwareChannelN=AMQChannel(amqp://guest@127.0.0.1:5672//zfdtest,1)
     private volatile AutorecoveringConnection connection; //amqp://guest@127.0.0.1:5672//zfdtest
     private final List<ShutdownListener> shutdownHooks = new CopyOnWriteArrayList<>();
     private final List<RecoveryListener> recoveryListeners = new CopyOnWriteArrayList<>();
@@ -729,9 +729,9 @@ public class AutorecoveringChannel implements RecoverableChannel {
     }
 
     @Override
-    public Command rpc(Method method) throws IOException {
+    public Command rpc(Method method) throws IOException { // #method<exchange.declare>(ticket=0, exchange=builder_test_xchg, type=direct, passive=false, durable=false, auto-delete=false, internal=false, nowait=false, arguments=null)
         recordOnRpcRequest(method);
-        AMQCommand response = delegate.rpc(method);
+        AMQCommand response = delegate.rpc(method); // {#method<exchange.declare-ok>(), null, ""}
         recordOnRpcResponse(response.getMethod(), method);
         return response;
     }
@@ -890,7 +890,7 @@ public class AutorecoveringChannel implements RecoverableChannel {
     }
 
     private void recordExchange(AMQP.Exchange.DeclareOk ok, String exchange, String type, boolean durable, boolean autoDelete, Map<String, Object> arguments) {
-        RecordedExchange x = new RecordedExchange(this, exchange).
+        RecordedExchange x = new RecordedExchange(this, exchange). // RecordedExchange[name=builder_test_xchg, type=direct, durable=false, autoDelete=false, arguments=null, channel=AMQChannel(amqp://guest@0:0:0:0:0:0:0:1:5672//zfdtest,1)]
                 type(type).
                 durable(durable).
                 autoDelete(autoDelete).

@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * 一个客户端连接（AMQConnection）一个实例
+ * 一个ConsumerWorkService 对应一个workPool
  */
 final public class ConsumerWorkService {
     private static final Logger LOGGER = LoggerFactory.getLogger(ConsumerWorkService.class);
@@ -34,7 +35,7 @@ final public class ConsumerWorkService {
     private static final int DEFAULT_NUM_THREADS = Math.max(1, Utils.availableProcessors());
     private final ExecutorService executor;
     private final boolean privateExecutor;
-    private final WorkPool<Channel, Runnable> workPool;
+    private final WorkPool<Channel, Runnable> workPool; // 一个客户端连接（AMQConnection）对应一个WorkPool
     private final int shutdownTimeout;
 
     public ConsumerWorkService(ExecutorService executor, ThreadFactory threadFactory, int queueingTimeout, int shutdownTimeout) {

@@ -1,14 +1,17 @@
 package com.rabbitmq.client.rabbitmq.tutorials;
 
 import com.rabbitmq.client.*;
+import com.rabbitmq.client.test.TestUtils;
 
+/**
+ * read
+ */
 public class ReceiveLogsTopic {
 
     private static final String EXCHANGE_NAME = "topic_logs";
 
     public static void main(String[] argv) throws Exception {
-        ConnectionFactory factory = new ConnectionFactory();
-        factory.setHost("localhost");
+        ConnectionFactory factory = TestUtils.connectionFactory();
         Connection connection = factory.newConnection();
         Channel channel = connection.createChannel();
 

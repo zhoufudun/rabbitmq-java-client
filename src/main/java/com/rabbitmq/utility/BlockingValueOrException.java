@@ -19,7 +19,7 @@ import java.util.concurrent.TimeoutException;
 
 public class BlockingValueOrException<V, E extends Throwable & SensibleClone<E>>
         extends BlockingCell<ValueOrException<V, E>> {
-    public void setValue(V v) {
+    public void setValue(V v) { // v={#method<queue.bind-ok>(), null, ""}
         super.set(ValueOrException.<V, E>makeValue(v)); // V 封装为ValueOrException对象
     }
 

@@ -6,6 +6,9 @@ import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.DeliverCallback;
 import java.nio.charset.StandardCharsets;
 
+/**
+ * read
+ */
 public class Recv {
 
     private final static String QUEUE_NAME = "hello";
